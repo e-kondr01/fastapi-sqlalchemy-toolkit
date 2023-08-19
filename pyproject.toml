@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fastapi_sqlalchemy_toolkit"
+version = "0.0.1"
+authors = [
+  { name="Egor Kondrashov", email="e.kondr01@gmail.com" },
+]
+description = "FastAPI SQLAlchemy Toolkit"
+readme = "README.md"
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit"
