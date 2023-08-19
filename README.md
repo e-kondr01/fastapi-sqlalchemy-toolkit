@@ -45,9 +45,9 @@ from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```
 
-## Доступные методы `BaseCrud`
+## Доступные методы `BaseCRUD`
 
-Ниже перечисленны доступные CRUD методы, предоставляемые `BaseCrud`.
+Ниже перечисленны доступные CRUD методы, предоставляемые `BaseCRUD`.
 Документация параметров, принимаемых методами, находится в докстрингах
 соответствующих методов.
 
@@ -55,7 +55,7 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyMode
 - `get` - получение объекта
 - `get_or_404` - получение объекта или ошибки 404
 - `exists` - проверка существования объекта
-- `paginated_filter` - получение списка объектов с пагинацией
+- `paginated_filter` - получение списка объектов с пагинацией через `fastapi_pagination`
 - `filter` - получение списка объектов
 - `count` - получение количества объектов
 - `update` - обновление объекта (также выполняет валидацию значений полей на уровне БД)
@@ -97,7 +97,7 @@ async def get_my_objects(
 Дополнительные возможности декларативной фильтрации поддерживаются использованием класса `FieldFilter`.
 `FieldFilter` позволяет:
 - фильтровать по значениям полей связанных моделей при задании атрибута `model`. 
-При этом `BaseCrud` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
+При этом `BaseCRUD` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
 - использовать любые операторы сравнения через атрибут `operator`
 - применять функции SQLAlchemy к полям (например, `date()`)
 
@@ -138,7 +138,7 @@ async def get_child_objects(
 ) -> list[ChildListSchema]
 ```
 
-3. Передать параметр сортировки как параметр `order_by` в методы `BaseCrud`
+3. Передать параметр сортировки как параметр `order_by` в методы `BaseCRUD`
 
 ```python
     return await child_db.filter(session=session, order_by=order_by)
