@@ -94,6 +94,19 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
 Если в эндпоинт `FastAPI` нужно добавить фильтры по значениям полей, то код будет выглядеть примерно так:
 
 ```python
+from typing import Annotated
+from uuid import UUID
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.deps import get_async_session
+from app.models import MyModel
+from app.schemas import MyObjectListSchema
+
+
+router = APIRouter()
+CurrentSession = Annotated[AsyncSession, Depends(get_async_session)]
+
 @router.get("/my-objects")
 async def get_my_objects(
     session: CurrentSession,
@@ -108,11 +121,13 @@ async def get_my_objects(
     result = await session.execute(stmt)
     return results.scalars().all()
 ```
-Как можно заметить, присутсвует дубликация шаблонного кода. А это только строгие сравнения, и поля находятся на основной модели.
+Как можно заметить, присутствует дубликация шаблонного кода. А это только строгие сравнения, и поля находятся на основной модели.
 
 В `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
 
 ```python
+from app.db_crud import my_object_db
+
 @router.get("/my-objects")
 async def get_my_objects(
     session: CurrentSession,
@@ -131,6 +146,8 @@ async def get_my_objects(
 
 ```python
 from fastapi_sqlalchemy_toolkit import FieldFilter
+from app.db_crud import parent_db
+from app.models import Child
 
 await parent_db.filter(session, child_title=FieldFilter(value=child_title, model=Child, operator="ilike"))
 ```
@@ -182,6 +199,8 @@ async def get_children(
 на связанной модели.
 
 ```python
+from app.models import Parent
+
 child_ordering_fields = [
     "title",
     "created_at",
@@ -197,9 +216,11 @@ child_ordering_fields = [
 а `?order_by=-title` сортирует по `title` по убыванию.
 
 2. В параметрах энпдоинта передать определённый выше список
-в `fastapi_sqlalchemy_toolkit.ordering_dep`
+в `ordering_dep`
 
 ```python
+from fastapi_sqlalchemy_toolkit import ordering_dep
+
 @router.get("/children")
 async def get_child_objects(
     session: CurrentSession,
@@ -224,14 +245,14 @@ async def get_child_objects(
 from fastapi_sqlalchemy_toolkit import BaseCRUD
 
 
-class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
     ...
 ```
 ### Дополнительная валидация
 Дополнительную валидацию можно добавить, переопределив метод `validate`:
 
 ```python
-class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
     async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
         """
         Проверяет тип выбранного объекта Parent
