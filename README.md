@@ -257,7 +257,7 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
         """
         Проверяет тип выбранного объекта Parent
         """
-        # объект Parent с таким ID точно есть, так как это прорверяется ранее в super().validate
+        # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
         parent = await parent_db.get(session, id=in_obj["parent_id"])
         if parent.type != ParentTypes.CanHaveChildren:
             raise HTTPException(
