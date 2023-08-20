@@ -1,12 +1,12 @@
 # FastAPI SQLAlchemy Toolkit
 
-**FastAPI SQLAlchemy Toolkit** -- это библиотека для стека `FastAPI` + Async `SQLAlchemy`,
+**FastAPI SQLAlchemy Toolkit** — это библиотека для стека `FastAPI` + Async `SQLAlchemy`,
 которая помогает решать следующие задачи:
 
-- Снижение количества шаблонного, копипастного кода, который возникает при разработке
-REST API и взаимодействии с СУБД через `SQLAlchemy`
+- cнижение количества шаблонного, копипастного кода, который возникает при разработке
+REST API и взаимодействии с СУБД через `SQLAlchemy`ж
 
-- Валидация значений на уровне БД
+- валидация значений на уровне БД.
 
 ## Features
 
@@ -46,6 +46,7 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyMode
 ```
 
 При инициализации DB CRUD также можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
+`fk_mapping` — это словарь, в котором ключи — это названия полей внешних ключей, а значения — модели SQLAlchemy, на которые эти ключи ссылаются.
 
 ```python
 from fastapi_sqlalchemy_toolkit import BaseCRUD
@@ -59,7 +60,7 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
 )
 ```
 
-Атрибут `default_ordering` определяет сортировку по умолчанию при получении списков объектов.
+Атрибут `default_ordering` определяет сортировку по умолчанию при получении списков объектов. В него нужно передать поле основной модели.
 
 ```python
 from fastapi_sqlalchemy_toolkit import BaseCRUD
