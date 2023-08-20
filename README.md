@@ -45,9 +45,33 @@ from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```
 
-При инициализации DB CRUD также можно задать атрибут `fk_mapping`, необходимый для валидации внешних ключей.
+При инициализации DB CRUD также можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
 
-Третий атрибут `default_ordering` определяет сортировку по умолчанию при получении списков объектов.
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+from .models import MyModel, MyParentModel
+from .schemas import MyModelCreateSchema, MyModelUpdateSchema
+
+my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+    MyModel,
+    fk_mapping={"parent_id": MyParentModel}
+)
+```
+
+Атрибут `default_ordering` определяет сортировку по умолчанию при получении списков объектов.
+
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+from .models import MyModel
+from .schemas import MyModelCreateSchema, MyModelUpdateSchema
+
+my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+    MyModel,
+    default_ordering=MyModel.title
+)
+```
 
 ## Доступные методы `BaseCRUD`
 
@@ -83,7 +107,7 @@ async def get_my_objects(
     result = await session.execute(stmt)
     return results.scalars().all()
 ```
-Уже видна дубликация шаблонного кода, а ведь это только строгие сравнения, и поля находятся на основной модели.
+Как можно заметить, присутсвует дубликация шаблонного кода. А это только строгие сравнения, и поля находятся на основной модели.
 
 В `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
 
@@ -206,10 +230,17 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
 Дополнительную валидацию можно добавить, переопределив метод `validate`:
 
 ```python
-async def validate_lt_4_children(self, session, validated_data: ModelDict) -> None:
-    parent = await parent_db.get(session, id=in_obj["parent_id"], options=joinedload(Parent.children))
-    if len(parent.children >= 4:
-         raise HttpError()
+async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
+    """
+    Проверяет тип выбранного объекта Parent
+    """
+    # объект Parent с таким ID точно есть, так как это прорверяется ранне в super().validate
+    parent = await parent_db.get(session, id=in_obj["parent_id"])
+    if parent.type != ParentTypes.CanHaveChildren:
+        raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This parent has incompatible type",
+            )
 
 async def run_db_validation(
         self,
@@ -217,14 +248,49 @@ async def run_db_validation(
         db_obj: ModelType | None = None,
         in_obj: ModelDict | None = None,
     ) -> ModelDict:
-    validated_data = super().validate(session, db_obj, in_obj)
-    await self.validate_lt_4_children(session, validated_data)
+    validated_data = await super().validate(session, db_obj, in_obj)
+    await self.validate_parent_type(session, validated_data)
     return validated_data
 ```
 ### Использование декларативных фильтров в нестандартных списочных запросах
+Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
+или агрегации, но также необходима декларативная фильтрация, то можно определить свой метод DB CRUD,
+вызвав в нём метод `super().get_filter_expression`:
+```python
+    async def get_parents_with_children_count(
+        self, session: AsyncSession, **kwargs
+    ) -> list[RetrieveParentWithChildrenCountSchema]:
+        children_count_query = (
+            select(func.count(Child.id))
+            .filter(Child.parent_id == Parent.id)
+            .scalar_subquery()
+        )
+        query = (
+            select(Parent, children_count_query.label("children_count"))
+        )
+
+        # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
+        # filter и paginated_filter BaseCRUD
+        query = query.filter(self.get_filter_expression(**kwargs))
+
+        result = await session.execute(query)
+        result = result.unique().all()
+        for row in result:
+            row.Parent.children_count = row.children_count
+        return [row.Parent for row in result]
+```
 
 ## Другие полезности
 ### Сохранение пользователя запроса
+
+Задать в создаваемом объекте пользователя запроса можно, передав дополнительный параметр методу `create` (аналогично с `update`)
+```python
+@router.post("")
+async def create_child(
+    child_in: CreateUpdateChildSchema, session: CurrentSession, user: CurrentUser
+) -> CreateUpdateChildSchema:
+    return await child_db.create(session=session, in_obj=child_in, author_id=user.id)
+```
 
 ### Создание и обновление объектов с M2M связями
 Если на модели определена M2M связь, то использование `BaseCRUD` позволяет передать в это поле список ID объектов.
