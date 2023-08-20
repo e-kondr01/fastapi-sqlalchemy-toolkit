@@ -116,7 +116,7 @@ await parent_db.filter(session, children=[1, 2])
 # Вернёт объекты Parent, у которых есть связь с Child с id 1 или 2
 ```
 ### Фильтрация по null
-Для того чтобы осуществтить фильтрацию по null, квери параметр должен принимать
+Для того чтобы осуществить фильтрацию по `null`, квери параметр должен принимать
 значения из `fastapi_sqlalchemy_toolkit.NullableQuery`:
 
 ```python
@@ -128,18 +128,18 @@ async def get_children(
     title: NullableQuery | UUID | None = None,
 ) -> Page[ChildRetrieveSchema]:
 ```
-По умолчанию, это пустая строка. То есть запрос с фильтрацией по title == None должен выглядеть так:
-GET /children?title=
+По умолчанию, это пустая строка. То есть запрос с фильтрацией по `title == None` должен выглядеть так:
+`GET /children?title=`
 
 *Почему так?*
 
 
 Если в эндпоинте FastAPI определён необязательный квери параметр, и он не передан
-в запросе, то значение этого параметра будет равно None. Исходя из этого, фильтр
+в запросе, то значение этого параметра будет равно `None`. Исходя из этого, фильтр
 в `filter` и `paginated_filter` не будет применён, если значение параметра равно None.
-Так как при запросе GET /children?title=alex ожидается, что будут возвращены
-объекты с title=alex, но при GET /children мы не ожидаем, что будут возвращены
-объекты с title=null.
+Так как при запросе `GET /children?title=alex` ожидается, что будут возвращены
+объекты с `title == alex`, но при GET `/children` мы не ожидаем, что будут возвращены
+объекты с `title == None`.
 
 ## Сортировка
 
@@ -185,4 +185,39 @@ async def get_child_objects(
 ```
 
 
-## Полезные примеры
+## Расширение
+Методы `BaseCRUD` легко расширить дополнительной логикой.
+
+
+В первую очередь необходимо определить свой класс DB CRUD, унаследовав его от `BaseCRUD`
+
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+    ...
+```
+### Дополнительная валидация
+Дополнительную валидацию можно добавить, переопределив метод `validate`:
+
+```python
+async def validate_lt_4_children(self, session, validated_data: ModelDict) -> None:
+    parent = await parent_db.get(session, id=in_obj["parent_id"], options=joinedload(Parent.children))
+    if len(parent.children >= 4:
+         raise HttpError()
+
+async def run_db_validation(
+        self,
+        session: AsyncSession,
+        db_obj: ModelType | None = None,
+        in_obj: ModelDict | None = None,
+    ) -> ModelDict:
+    validated_data = super().validate(session, db_obj, in_obj)
+    await self.validate_lt_4_children(session, validated_data)
+    return validated_data
+```
+### Использование декларативных фильтров в нестандартных списочных запросах
+
+## Другие полезности
+### Сохранение пользователя запроса
