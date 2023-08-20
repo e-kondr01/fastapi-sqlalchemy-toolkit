@@ -230,33 +230,35 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
 Дополнительную валидацию можно добавить, переопределив метод `validate`:
 
 ```python
-async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
-    """
-    Проверяет тип выбранного объекта Parent
-    """
-    # объект Parent с таким ID точно есть, так как это прорверяется ранне в super().validate
-    parent = await parent_db.get(session, id=in_obj["parent_id"])
-    if parent.type != ParentTypes.CanHaveChildren:
-        raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="This parent has incompatible type",
-            )
-
-async def run_db_validation(
-        self,
-        session: AsyncSession,
-        db_obj: ModelType | None = None,
-        in_obj: ModelDict | None = None,
-    ) -> ModelDict:
-    validated_data = await super().validate(session, db_obj, in_obj)
-    await self.validate_parent_type(session, validated_data)
-    return validated_data
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+    async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
+        """
+        Проверяет тип выбранного объекта Parent
+        """
+        # объект Parent с таким ID точно есть, так как это прорверяется ранне в super().validate
+        parent = await parent_db.get(session, id=in_obj["parent_id"])
+        if parent.type != ParentTypes.CanHaveChildren:
+            raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This parent has incompatible type",
+                )
+    
+    async def run_db_validation(
+            self,
+            session: AsyncSession,
+            db_obj: ModelType | None = None,
+            in_obj: ModelDict | None = None,
+        ) -> ModelDict:
+        validated_data = await super().validate(session, db_obj, in_obj)
+        await self.validate_parent_type(session, validated_data)
+        return validated_data
 ```
 ### Использование декларативных фильтров в нестандартных списочных запросах
 Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
 или агрегации, но также необходима декларативная фильтрация, то можно определить свой метод DB CRUD,
 вызвав в нём метод `super().get_filter_expression`:
 ```python
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
     async def get_parents_with_children_count(
         self, session: AsyncSession, **kwargs
     ) -> list[RetrieveParentWithChildrenCountSchema]:
