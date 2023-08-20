@@ -403,7 +403,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filters.append(filter_expression)
 
     def get_filter_expression(
-        self, **kwargs: dict[str, FieldFilter | Any | None]
+        self, **kwargs: FieldFilter | Any
     ) -> BooleanClauseList | None:
         filters: list[BinaryExpression] = []
         for field_name, filter_options in kwargs.items():

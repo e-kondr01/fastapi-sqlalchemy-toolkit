@@ -62,7 +62,7 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyMode
 - `delete` - удаление объекта
 
 ## Фильтрация
-
+### Предпосылки
 Если в эндпоинт `FastAPI` нужно добавить фильтры по значениям полей, то код будет выглядеть примерно так:
 
 ```python
@@ -80,7 +80,7 @@ async def get_my_objects(
     result = await session.execute(stmt)
     return results.scalars().all()
 ```
-Уже видна дупликация шаблонного кода, а ведь это только строгие сравнения, и поля находятся на самой модели.
+Уже видна дубликация шаблонного кода, а ведь это только строгие сравнения, и поля находятся на самой модели.
 
 В `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
 
@@ -93,13 +93,50 @@ async def get_my_objects(
 ) -> list[MyObjectListSchema]:
     return await my_object_db.filter(session, user_id=user_id, name=name)
 ```
-
+### Использование FieldFilter
 Дополнительные возможности декларативной фильтрации поддерживаются использованием класса `FieldFilter`.
 `FieldFilter` позволяет:
 - фильтровать по значениям полей связанных моделей при задании атрибута `model`. 
 При этом `BaseCRUD` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
 - использовать любые операторы сравнения через атрибут `operator`
 - применять функции SQLAlchemy к полям (например, `date()`) через атрибут `func`
+
+```python
+from fastapi_sqlalchemy_toolkit import FieldFilter
+
+await parent_db.filter(session, child_title=FieldFilter(value=child_title, model=Child, operator="ilike"))
+```
+### Фильтрация по обратным связям
+Также в методах `filter` и `paginated_filter` есть поддержка фильтрации
+по обратным связям (`relationship()` в направлении многие к одному) с использованием метода `.any()`.
+
+```python
+# Если Parent.children -- это обратная связь
+await parent_db.filter(session, children=[1, 2])
+# Вернёт объекты Parent, у которых есть связь с Child с id 1 или 2
+```
+### Фильтрация по null
+Если в эндпоинте FastAPI определён необязательный квери параметр, и его значение не задано
+в запросе, то значение этого параметра будет равно None. Исходя из этого, фильтр
+в `filter` и `paginated_filter` не будет применён, если значение параметра равно None.
+Так как при запросе GET /children?title=alex ожидается, что будут возвращены
+объекты с title=alex, но при GET /children мы не ожидаем, что будут возвращены
+объекты с title=null.
+
+Для того чтобы осуществтить фильтрацию по null, квери параметр должен принимать
+значения из `fastapi_sqlalchemy_toolkit.NullableQuery`:
+
+```python
+from fastapi_sqlalchemy_toolkit import NullableQuery
+
+@router.get("")
+async def get_children(
+    session: CurrentSession,
+    title: NullableQuery | UUID | None = None,
+) -> Page[ChildRetrieveSchema]:
+```
+По умолчанию, это пустая строка. То есть запрос на фронте должен выглядеть так:
+GET /children?title=
 
 ## Сортировка
 
