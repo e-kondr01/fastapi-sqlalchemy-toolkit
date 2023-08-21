@@ -1,12 +1,12 @@
 # FastAPI SQLAlchemy Toolkit
 
-**FastAPI SQLAlchemy Toolkit** -- это библиотека для стека `FastAPI` + Async `SQLAlchemy`,
-которая призвана решить следующие задачи:
+**FastAPI SQLAlchemy Toolkit** — это библиотека для стека `FastAPI` + Async `SQLAlchemy`,
+которая помогает решать следующие задачи:
 
-- Снижение количества шаблонного, копипастного кода, который возникает при разработке
-REST API и взаимодействии с СУБД средствами `SQLAlchemy`
+- cнижение количества шаблонного, копипастного кода, который возникает при разработке
+REST API и взаимодействии с СУБД через `SQLAlchemy`;
 
-- Встроенная валидация значений на уровне БД
+- валидация значений на уровне БД.
 
 ## Features
 
@@ -18,7 +18,7 @@ REST API и взаимодействии с СУБД средствами `SQLAl
 
 - Валидация существования внешних ключей
 
-- Валидация уникальных ограничений 
+- Валидация уникальных ограничений
 
 - Упрощение CRUD-действий с M2M связями
 
@@ -45,11 +45,39 @@ from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```
 
+При инициализации DB CRUD также можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
+`fk_mapping` — это словарь, в котором ключи — это названия полей внешних ключей, а значения — модели SQLAlchemy, на которые эти ключи ссылаются.
+
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+from .models import MyModel, MyParentModel
+from .schemas import MyModelCreateSchema, MyModelUpdateSchema
+
+my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+    MyModel,
+    fk_mapping={"parent_id": MyParentModel}
+)
+```
+
+Атрибут `default_ordering` определяет сортировку по умолчанию при получении списков объектов. В него нужно передать поле основной модели.
+
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+from .models import MyModel
+from .schemas import MyModelCreateSchema, MyModelUpdateSchema
+
+my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+    MyModel,
+    default_ordering=MyModel.title
+)
+```
+
 ## Доступные методы `BaseCRUD`
 
-Ниже перечисленны доступные CRUD методы, предоставляемые `BaseCRUD`.
-Документация параметров, принимаемых методами, находится в докстрингах
-соответствующих методов.
+Ниже перечислены доступные CRUD методы, предоставляемые `BaseCRUD`.
+Документация параметров, принимаемых методами, находится в докстрингах методов.
 
 - `create` - создание объекта (также выполняет валидацию значений полей на уровне БД)
 - `get` - получение объекта
@@ -66,6 +94,19 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyMode
 Если в эндпоинт `FastAPI` нужно добавить фильтры по значениям полей, то код будет выглядеть примерно так:
 
 ```python
+from typing import Annotated
+from uuid import UUID
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.deps import get_async_session
+from app.models import MyModel
+from app.schemas import MyObjectListSchema
+
+
+router = APIRouter()
+CurrentSession = Annotated[AsyncSession, Depends(get_async_session)]
+
 @router.get("/my-objects")
 async def get_my_objects(
     session: CurrentSession,
@@ -80,11 +121,13 @@ async def get_my_objects(
     result = await session.execute(stmt)
     return results.scalars().all()
 ```
-Уже видна дубликация шаблонного кода, а ведь это только строгие сравнения, и поля находятся на самой модели.
+Как можно заметить, присутствует дубликация шаблонного кода. А это только строгие сравнения, и поля находятся на основной модели.
 
 В `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
 
 ```python
+from app.db_crud import my_object_db
+
 @router.get("/my-objects")
 async def get_my_objects(
     session: CurrentSession,
@@ -96,34 +139,29 @@ async def get_my_objects(
 ### Использование FieldFilter
 Дополнительные возможности декларативной фильтрации поддерживаются использованием класса `FieldFilter`.
 `FieldFilter` позволяет:
-- фильтровать по значениям полей связанных моделей при задании атрибута `model`. 
+- фильтровать по значениям полей связанных моделей при установке атрибута `model`. 
 При этом `BaseCRUD` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
 - использовать любые операторы сравнения через атрибут `operator`
 - применять функции SQLAlchemy к полям (например, `date()`) через атрибут `func`
 
 ```python
 from fastapi_sqlalchemy_toolkit import FieldFilter
+from app.db_crud import parent_db
+from app.models import Child
 
 await parent_db.filter(session, child_title=FieldFilter(value=child_title, model=Child, operator="ilike"))
 ```
 ### Фильтрация по обратным связям
 Также в методах `filter` и `paginated_filter` есть поддержка фильтрации
-по обратным связям (`relationship()` в направлении многие к одному) с использованием метода `.any()`.
+по обратным связям (`relationship()` в направлении один ко многим) с использованием метода `.any()`.
 
 ```python
-# Если Parent.children -- это обратная связь
+# Если Parent.children -- это связь один ко многим
 await parent_db.filter(session, children=[1, 2])
 # Вернёт объекты Parent, у которых есть связь с Child с id 1 или 2
 ```
 ### Фильтрация по null
-Если в эндпоинте FastAPI определён необязательный квери параметр, и его значение не задано
-в запросе, то значение этого параметра будет равно None. Исходя из этого, фильтр
-в `filter` и `paginated_filter` не будет применён, если значение параметра равно None.
-Так как при запросе GET /children?title=alex ожидается, что будут возвращены
-объекты с title=alex, но при GET /children мы не ожидаем, что будут возвращены
-объекты с title=null.
-
-Для того чтобы осуществтить фильтрацию по null, квери параметр должен принимать
+Для того чтобы осуществить фильтрацию по `null`, квери параметр должен принимать
 значения из `fastapi_sqlalchemy_toolkit.NullableQuery`:
 
 ```python
@@ -135,8 +173,19 @@ async def get_children(
     title: NullableQuery | UUID | None = None,
 ) -> Page[ChildRetrieveSchema]:
 ```
-По умолчанию, это пустая строка. То есть запрос на фронте должен выглядеть так:
-GET /children?title=
+`NullableQuery` это пустая строка. То есть запрос с фильтрацией по `title == None` должен выглядеть так:
+`GET /children?title=`
+
+*Почему так?*
+
+
+При запросе `GET /children?title=alex` ожидается, что будут возвращены
+объекты с `title == alex`, но при GET `/children` мы не ожидаем, что будут возвращены
+объекты с `title == None`.
+
+Если в эндпоинте FastAPI определён необязательный квери параметр, и он не передан
+в запросе, то значение этого параметра будет равно `None`. Чтобы не возникала описанная выше некорректная фильтрация, фильтр
+в `filter` и `paginated_filter` не будет применён, если значение параметра равно `None`.
 
 ## Сортировка
 
@@ -150,6 +199,8 @@ GET /children?title=
 на связанной модели.
 
 ```python
+from app.models import Parent
+
 child_ordering_fields = [
     "title",
     "created_at",
@@ -165,9 +216,11 @@ child_ordering_fields = [
 а `?order_by=-title` сортирует по `title` по убыванию.
 
 2. В параметрах энпдоинта передать определённый выше список
-в `fastapi_sqlalchemy_toolkit.ordering_dep`
+в `ordering_dep`
 
 ```python
+from fastapi_sqlalchemy_toolkit import ordering_dep
+
 @router.get("/children")
 async def get_child_objects(
     session: CurrentSession,
@@ -182,4 +235,88 @@ async def get_child_objects(
 ```
 
 
-## Полезные примеры
+## Расширение
+Методы `BaseCRUD` легко расширить дополнительной логикой.
+
+
+В первую очередь необходимо определить свой класс DB CRUD, унаследовав его от `BaseCRUD`
+
+```python
+from fastapi_sqlalchemy_toolkit import BaseCRUD
+
+
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
+    ...
+```
+### Дополнительная валидация
+Дополнительную валидацию можно добавить, переопределив метод `validate`:
+
+```python
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
+    async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
+        """
+        Проверяет тип выбранного объекта Parent
+        """
+        # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
+        parent = await parent_db.get(session, id=in_obj["parent_id"])
+        if parent.type != ParentTypes.CanHaveChildren:
+            raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This parent has incompatible type",
+                )
+    
+    async def run_db_validation(
+            self,
+            session: AsyncSession,
+            db_obj: ModelType | None = None,
+            in_obj: ModelDict | None = None,
+        ) -> ModelDict:
+        validated_data = await super().validate(session, db_obj, in_obj)
+        await self.validate_parent_type(session, validated_data)
+        return validated_data
+```
+### Использование декларативных фильтров в нестандартных списочных запросах
+Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
+или агрегации, но также необходима декларативная фильтрация, то можно определить свой метод DB CRUD,
+вызвав в нём метод `super().get_filter_expression`:
+```python
+class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+    async def get_parents_with_children_count(
+        self, session: AsyncSession, **kwargs
+    ) -> list[RetrieveParentWithChildrenCountSchema]:
+        children_count_query = (
+            select(func.count(Child.id))
+            .filter(Child.parent_id == Parent.id)
+            .scalar_subquery()
+        )
+        query = (
+            select(Parent, children_count_query.label("children_count"))
+        )
+
+        # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
+        # filter и paginated_filter BaseCRUD
+        query = query.filter(self.get_filter_expression(**kwargs))
+
+        result = await session.execute(query)
+        result = result.unique().all()
+        for row in result:
+            row.Parent.children_count = row.children_count
+        return [row.Parent for row in result]
+```
+
+## Другие полезности
+### Сохранение пользователя запроса
+
+Задать в создаваемом объекте пользователя запроса можно, передав дополнительный параметр методу `create` (аналогично с `update`)
+```python
+@router.post("")
+async def create_child(
+    child_in: CreateUpdateChildSchema, session: CurrentSession, user: CurrentUser
+) -> CreateUpdateChildSchema:
+    return await child_db.create(session=session, in_obj=child_in, author_id=user.id)
+```
+
+### Создание и обновление объектов с M2M связями
+Если на модели определена M2M связь, то использование `BaseCRUD` позволяет передать в это поле список ID объектов.
+
+`fastapi-sqlalchemy-toolkit` провалидирует существование этих объектов и установит им M2M связь, без необходимости создавать отдельные эндпоинты для работы с M2M связями.
