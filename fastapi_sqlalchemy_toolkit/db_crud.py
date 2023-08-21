@@ -79,6 +79,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         in_obj: CreateSchemaType | ModelDict,
+        refresh_attribute_names: list[str] | None = None,
         **attrs: Any,
     ) -> ModelType:
         """
@@ -88,6 +89,9 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param session: сессия SQLAlchemy
 
         :param in_obj: значения полей создаваемого экземпляра модели в словаре
+
+        :param refresh_attribute_names: список полей, которые нужно обновить
+        (может использоваться для подгрузки связанных полей)
 
         :param attrs: дополнительные значения полей создаваемого экземпляра
         (чтобы какие-то поля можно было установить напрямую из кода,
@@ -105,7 +109,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj = self.model(**validated_data)
         session.add(db_obj)
         await session.commit()
-        await session.refresh(db_obj)
+        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def get(
@@ -286,6 +290,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         db_obj: ModelType,
         in_obj: UpdateSchemaType | ModelDict,
+        refresh_attribute_names: list[str] | None = None,
         **attrs,
     ) -> ModelType:
         """
@@ -302,6 +307,9 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         (чтобы какие-то поля можно было установить напрямую из кода,
         например, пользователя запроса)
 
+        :param refresh_attribute_names: список полей, которые нужно обновить
+        (может использоваться для подгрузки связанных полей)
+
         :returns: обновлённый экземпляр модели
         """
         if isinstance(in_obj, dict):
@@ -317,7 +325,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             setattr(db_obj, field, validated_data[field])
         session.add(db_obj)
         await session.commit()
-        await session.refresh(db_obj)
+        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def delete(
