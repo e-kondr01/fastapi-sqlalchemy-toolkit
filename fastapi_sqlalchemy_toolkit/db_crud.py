@@ -137,7 +137,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filter_expression = self.get_filter_expression(**attrs)
         statement = self.get_base_query().filter(filter_expression)
         if options is not None:
-            statement = statement.options(options)
+            if isinstance(options, list):
+                for option in options:
+                    statement = statement.options(option)
+            else:
+                statement = statement.options(options)
         order_by_expression = self.get_order_by_expression(order_by)
         if order_by_expression is not None:
             statement = statement.order_by(order_by_expression)
