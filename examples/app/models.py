@@ -1,8 +1,9 @@
 from uuid import UUID
 
-from fastapi_sqlalchemy_toolkit import Base
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from fastapi_sqlalchemy_toolkit import Base
 
 
 class Parent(Base):

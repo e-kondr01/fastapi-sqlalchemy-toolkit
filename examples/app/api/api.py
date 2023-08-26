@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.endpoints import child
+from .endpoints import child
 
 api_router = APIRouter()
 api_router.include_router(

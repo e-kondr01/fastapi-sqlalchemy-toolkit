@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.api import api_router
-
+from .api.api import api_router
 
 app = FastAPI(
     title="fastapi-sqlalchemy-toolkit demo",
