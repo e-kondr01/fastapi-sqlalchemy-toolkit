@@ -4,7 +4,6 @@ from dateutil import parser
 
 from .base_model import Base
 
-
 # NullableQuery определяет значения квери параметра,
 # который должны интерпретироваться как сравнение с null.
 # None интерпретируется как отсутствие квери параметра

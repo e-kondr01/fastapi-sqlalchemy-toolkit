@@ -1,7 +1,6 @@
 from typing import Any, Optional, Type
 
 import pydantic
-from dateutil import parser
 from fastapi import Query
 
 
@@ -30,6 +29,7 @@ class AllOptional(pydantic.main.ModelMetaclass):
         namespaces["__annotations__"] = annotations
 
         return super().__new__(self, name, bases, namespaces, **kwargs)
+
 
 # Утилиты для передачи нескольких значений для фильтрации в одном
 # квери параметре через запятую

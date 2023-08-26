@@ -1,15 +1,12 @@
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated, Any, Callable, Literal, Optional, Sequence, Type, get_args
+from typing import Annotated, Sequence, Type
 from uuid import uuid4
 
-import pydantic
-from dateutil import parser
-from fastapi import Depends, Query
+from fastapi import Depends
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 
-from app.models.base import Base
-
+from .base_model import Base
 
 
 @dataclass
