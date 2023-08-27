@@ -22,4 +22,8 @@ class RetrieveChildSchema(ChildBaseSchema):
 
 
 class RetrieveParentSchema(ParentBaseSchema):
-    children: list[ChildBaseSchema | None]
+    children: list[ChildBaseSchema] | None
+
+
+class HTTPErrorSchema(BaseModel):
+    detail: str

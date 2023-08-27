@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db_crud import child_db
 from app.deps import get_async_session
 from app.models import Parent
-from app.schemas import CreateUpdateChildSchema, RetrieveChildSchema
+from app.schemas import CreateUpdateChildSchema, HTTPErrorSchema, RetrieveChildSchema
 
 router = APIRouter()
 
@@ -40,7 +40,12 @@ async def get_children(
     )
 
 
-@router.get("/{child_id}")
+@router.get(
+    "/{child_id}",
+    responses={
+        status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
+    },
+)
 async def get_child(
     child_id: UUID,
     session: CurrentSession,
@@ -58,6 +63,12 @@ async def create_child(
     return await child_db.create(session=session, in_obj=child_in)
 
 
+@router.get(
+    "/{child_id}",
+    responses={
+        status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
+    },
+)
 @router.patch("/{child_id}")
 async def update_child(
     child_id: UUID, child_in: CreateUpdateChildSchema, session: CurrentSession
@@ -68,6 +79,12 @@ async def update_child(
     )
 
 
+@router.get(
+    "/{child_id}",
+    responses={
+        status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
+    },
+)
 @router.delete("/{child_id}")
 async def delete_child(child_id: UUID, session: CurrentSession) -> Response:
     child_to_delete = await child_db.get_or_404(session=session, id=child_id)

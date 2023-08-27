@@ -162,10 +162,11 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
 
         db_obj = await self.get(session=session, **attrs)
+        attrs_str = ", ".join([f"{key}={value}" for key, value in attrs.items()])
         if not db_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"{self.model.__tablename__.capitalize()} not found",
+                detail=f"{self.model.__tablename__} with {attrs_str} not found",
             )
         return db_obj
 
@@ -507,9 +508,9 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 )
                 if not related_object_exists:
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=(
-                            f"{self.fk_mapping[key].__tablename__} с ID "
+                            f"{self.fk_mapping[key].__tablename__} с id "
                             f"{in_obj[key]} не существует."
                         ),
                     )
@@ -528,7 +529,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if object_exists:
                 conflicting_fields = ", ".join(unique_constraint)
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail=(
                         f"{self.model.__tablename__} с такими "
                         + conflicting_fields
@@ -553,7 +554,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 check_unique = await self.exists(session=session, **attrs_to_check)
                 if check_unique:
                     raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=(
                             f"{self.model.__tablename__} c {column.name} "
                             f"{in_obj[column.name]} уже существует"
@@ -569,9 +570,9 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     related_object = await session.get(related_model, related_object_id)
                     if not related_object:
                         raise HTTPException(
-                            status_code=status.HTTP_400_BAD_REQUEST,
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail=(
-                                f"{related_model.__tablename__} с ID "
+                                f"{related_model.__tablename__} с id "
                                 f"{related_object_id} не существует."
                             ),
                         )
