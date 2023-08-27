@@ -1,10 +1,10 @@
-from typing import Any, Optional, Type
+from typing import Annotated, Any, Optional, Type
 
 import pydantic
 from fastapi import Query
 
 
-class AllOptional(pydantic.main.ModelMetaclass):
+class AllOptional(pydantic._internal._model_construction.ModelMetaclass):
     """
     Метакласс, который делает все поля модели Pydantic необязательными.
     Полезно для схем PATCH запросов.
@@ -33,13 +33,16 @@ class AllOptional(pydantic.main.ModelMetaclass):
 
 # Утилиты для передачи нескольких значений для фильтрации в одном
 # квери параметре через запятую
-comma_list_query = Query(
-    description="Несколько значений можно передать через запятую",
-    default=None,
-)
+comma_list_query = Annotated[
+    str | None, Query(description="Несколько значений можно передать через запятую")
+]
 
 
 def get_comma_list_values(query: str | None, type_: Type) -> list | None:
+    """
+    :param query: Значение квери параметра
+    :param type_: Тип значений в списке
+    """
     if query:
         return [type_(query_value) for query_value in query.split(",")]
     return None
