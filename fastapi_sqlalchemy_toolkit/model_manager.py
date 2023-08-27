@@ -22,7 +22,7 @@ UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 ModelDict = dict[str, Any]
 
 
-class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(
         self,
         model: Type[ModelType],
@@ -30,7 +30,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         default_ordering: InstrumentedAttribute | None = None,
     ) -> None:
         """
-        Создание экземпляра DB CRUD под конкретную модель.
+        Создание экземпляра ModelManager под конкретную модель.
 
         :param model: модель SQLAlchemy
 
@@ -38,7 +38,7 @@ class BaseCRUD(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         которые являются внешними ключами, и модели SQLAlchemy,
         на которые ключи ссылаются.
         Этот параметр нужно определить для валидации внешних ключей.
-        Например, если DB CRUD создаётся для модели Child, которая имеет
+        Например, если ModelManager создаётся для модели Child, которая имеет
         внешний ключ parent_id на модель Parent, то нужно передать
         fk_mapping={"parent_id": Parent}
 

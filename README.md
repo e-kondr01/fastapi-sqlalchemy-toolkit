@@ -32,29 +32,29 @@ pip install fastapi-sqlalchemy-toolkit
 
 Пример использования `fastapi-sqlalchemy-toolkit` доступен в директории `examples/app`
 
-## Получение DB CRUD
+## Инициализация ModelManager
 
-Для использования `fastapi-sqlaclhemy-toolkit` необходимо создать экземпляр `BaseCRUD` для своей модели:
+Для использования `fastapi-sqlaclhemy-toolkit` необходимо создать экземпляр `ModelManager` для своей модели:
 
 ```python
-from fastapi_sqlalchemy_toolkit import BaseCRUD
+from fastapi_sqlalchemy_toolkit import ModelManager
 
 from .models import MyModel
 from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 
-my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
+my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```
 
-При инициализации DB CRUD можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
+При инициализации ModelManager можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
 `fk_mapping` — это словарь, в котором ключи — это названия внешних ключей, а значения — модели SQLAlchemy, на которые эти ключи ссылаются.
 
 ```python
-from fastapi_sqlalchemy_toolkit import BaseCRUD
+from fastapi_sqlalchemy_toolkit import ModelManager
 
 from .models import MyModel, MyParentModel
 from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 
-my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
     MyModel, fk_mapping={"parent_id": MyParentModel}
 )
 ```
@@ -62,19 +62,19 @@ my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
 Атрибут `default_ordering` определяет сортировку по умолчанию при получении списка объектов. В него нужно передать поле основной модели.
 
 ```python
-from fastapi_sqlalchemy_toolkit import BaseCRUD
+from fastapi_sqlalchemy_toolkit import ModelManager
 
 from .models import MyModel
 from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 
-my_model_db = BaseCRUD[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
     MyModel, default_ordering=MyModel.title
 )
 ```
 
-## Доступные методы `BaseCRUD`
+## Доступные методы `ModelManager`
 
-Ниже перечислены CRUD методы, предоставляемые `BaseCRUD`.
+Ниже перечислены CRUD методы, предоставляемые `ModelManager`.
 Документация параметров, принимаемых методами, находится в докстрингах методов.
 
 - `create` - создание объекта; выполняет валидацию значений полей на уровне БД
@@ -132,7 +132,7 @@ async def get_my_objects(
 ```python
 from fastapi_sqlalchemy_toolkit import FieldFilter
 
-from app.db_crud import my_object_db
+from app.managers import my_object_manager
 
 @router.get("/my-objects")
 async def get_my_objects(
@@ -141,7 +141,7 @@ async def get_my_objects(
     name: str | None = None,
     parent_name: str | None = None,
 ) -> list[MyObjectListSchema]:
-    return await my_object_db.filter(
+    return await my_object_manager.filter(
         session,
         user_id=user_id,
         name=FieldFilter(name, operator="ilike"),
@@ -152,17 +152,17 @@ async def get_my_objects(
 Дополнительные возможности декларативной фильтрации поддерживаются использованием класса `FieldFilter`.
 `FieldFilter` позволяет:
 - фильтровать по значениям полей связанных моделей при установке атрибута `model`. 
-При этом `BaseCRUD` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
+При этом `ModelManager` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
 - использовать любые методы и атрибуты полей SQLAlchemy через атрибут `operator`
 - применять функции SQLAlchemy к полям (например, `date()`) через атрибут `func`
 
 ```python
-from app.db_crud import parent_db
+from app.managers import parent_manager
 from app.models import Child
 
 from fastapi_sqlalchemy_toolkit import FieldFilter
 
-await parent_db.filter(
+await parent_manager.filter(
     session, child_title=FieldFilter(child_title, model=Child, operator="ilike")
 )
 ```
@@ -172,7 +172,7 @@ await parent_db.filter(
 
 ```python
 # Если ParentModel.children -- это связь один ко многим
-await parent_db.filter(session, children=[1, 2])
+await parent_manager.filter(session, children=[1, 2])
 # Вернёт объекты Parent, у которых есть связь с ChildModel с id 1 или 2
 ```
 ### Фильтрация по null
@@ -245,37 +245,37 @@ async def get_child_objects(
     ...
 ```
 
-3. Передать параметр сортировки как параметр `order_by` в методы `BaseCRUD`
+3. Передать параметр сортировки как параметр `order_by` в методы `ModelManager`
 
 ```python
-    return await child_db.filter(session=session, order_by=order_by)
+    return await child_manager.filter(session=session, order_by=order_by)
 ```
 
 
 ## Расширение
-Методы `BaseCRUD` легко расширить дополнительной логикой.
+Методы `ModelManager` легко расширить дополнительной логикой.
 
 
-В первую очередь необходимо определить свой класс DB CRUD, унаследовав его от `BaseCRUD`
+В первую очередь необходимо определить свой класс ModelManager:
 
 ```python
-from fastapi_sqlalchemy_toolkit import BaseCRUD
+from fastapi_sqlalchemy_toolkit import ModelManager
 
 
-class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
     ...
 ```
 ### Дополнительная валидация
 Дополнительную валидацию можно добавить, переопределив метод `validate`:
 
 ```python
-class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
     async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
         """
         Проверяет тип выбранного объекта Parent
         """
         # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
-        parent = await parent_db.get(session, id=in_obj["parent_id"])
+        parent = await parent_manager.get(session, id=in_obj["parent_id"])
         if parent.type != ParentTypes.CanHaveChildren:
             raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -285,19 +285,36 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](BaseCRUD):
     async def run_db_validation(
             self,
             session: AsyncSession,
-            db_obj: ModelType | None = None,
+            db_obj: MyModel | None = None,
             in_obj: ModelDict | None = None,
         ) -> ModelDict:
         validated_data = await super().validate(session, db_obj, in_obj)
         await self.validate_parent_type(session, validated_data)
         return validated_data
 ```
+
+### Дополнительная бизнес логика при CRUD операциях
+Если при CRUD операциях с моделью необходимо выполнить какую-то дополнительную бизнес логику,
+это можно сделать, переопределив соответствующие методы ModelManager:
+
+```python
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
+    async def create(
+        self, *args, background_tasks: BackgroundTasks | None = None, **kwargs
+    ) -> MyModel:
+    created = await super().create(*args, **kwargs)
+    background_tasks.add_task(send_email, created.id)
+    return created
+```
+
+Такой подход соответствует принципу "Fat Models, Skinny Views" из Django.
+
 ### Использование декларативных фильтров в нестандартных списочных запросах
 Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
-или агрегации, но также необходима декларативная фильтрация, то можно определить свой метод DB CRUD,
+или агрегации, но также необходима декларативная фильтрация, то можно новый свой метод менеджера,
 вызвав в нём метод `super().get_filter_expression`:
 ```python
-class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
     async def get_parents_with_children_count(
         self, session: AsyncSession, **kwargs
     ) -> list[RetrieveParentWithChildrenCountSchema]:
@@ -311,7 +328,7 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
         )
 
         # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
-        # filter и paginated_filter BaseCRUD
+        # filter и paginated_filter
         query = query.filter(self.get_filter_expression(**kwargs))
 
         result = await session.execute(query)
@@ -325,18 +342,18 @@ class MyModelCRUDB[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
 ## Другие полезности
 ### Сохранение пользователя запроса
 
-Пользователя запросаЗ можно задать в создаваемом/обновляемом объекте,
+Пользователя запроса можно задать в создаваемом/обновляемом объекте,
 передав дополнительный параметр в метод `create` (`update`):
 ```python
 @router.post("")
 async def create_child(
     child_in: CreateUpdateChildSchema, session: CurrentSession, user: CurrentUser
 ) -> CreateUpdateChildSchema:
-    return await child_db.create(session=session, in_obj=child_in, author_id=user.id)
+    return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
 ```
 
 ### Создание и обновление объектов с M2M связями
-Если на модели определена M2M связь, то использование `BaseCRUD` позволяет передать в это поле список ID объектов.
+Если на модели определена M2M связь, то использование `ModelManager` позволяет передать в это поле список ID объектов.
 
 `fastapi-sqlalchemy-toolkit` провалидирует существование этих объектов и установит им M2M связь,
 без необходимости создавать отдельные эндпоинты для работы с M2M связями.
@@ -352,7 +369,7 @@ class PersonCreateSchema(BaseModel):
 ...
 
     in_obj = PersonCreateSchema(house_ids=[1, 2, 3])
-    await person_db.create(session, in_obj)
+    await person_manager.create(session, in_obj)
     # Создаст объект Person и установит ему M2M связь с House с id 1, 2 и 3
 ```
 
@@ -370,5 +387,5 @@ async def get_child_objects(
     ids: comma_list_query = None,
 ) -> list[ChildListSchema]
     ids = get_comma_list_values(ids, UUID)
-    return await child_db.filter(session, id=FieldFilter(ids, operator="in_"))
+    return await child_manager.filter(session, id=FieldFilter(ids, operator="in_"))
 ```

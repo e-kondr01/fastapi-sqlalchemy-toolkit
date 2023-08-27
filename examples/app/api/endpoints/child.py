@@ -6,8 +6,8 @@ from fastapi_pagination import Page, Params
 from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db_crud import child_db
 from app.deps import get_async_session
+from app.managers import child_manager
 from app.models import Parent
 from app.schemas import CreateUpdateChildSchema, HTTPErrorSchema, RetrieveChildSchema
 
@@ -29,7 +29,7 @@ async def get_children(
     parent_title: str | None = None,
     parent_slug: str | None = None,
 ) -> Page[RetrieveChildSchema]:
-    return await child_db.paginated_filter(
+    return await child_manager.paginated_filter(
         session=session,
         pagination_params=params,
         title=FieldFilter(value=title, operator="ilike"),
@@ -50,7 +50,7 @@ async def get_child(
     child_id: UUID,
     session: CurrentSession,
 ) -> RetrieveChildSchema:
-    return await child_db.get_or_404(
+    return await child_manager.get_or_404(
         session=session,
         id=child_id,
     )
@@ -60,7 +60,7 @@ async def get_child(
 async def create_child(
     child_in: CreateUpdateChildSchema, session: CurrentSession
 ) -> CreateUpdateChildSchema:
-    return await child_db.create(session=session, in_obj=child_in)
+    return await child_manager.create(session=session, in_obj=child_in)
 
 
 @router.get(
@@ -73,8 +73,8 @@ async def create_child(
 async def update_child(
     child_id: UUID, child_in: CreateUpdateChildSchema, session: CurrentSession
 ) -> CreateUpdateChildSchema:
-    child_to_update = await child_db.get_or_404(session=session, id=child_id)
-    return await child_db.update(
+    child_to_update = await child_manager.get_or_404(session=session, id=child_id)
+    return await child_manager.update(
         session=session, db_obj=child_to_update, in_obj=child_in
     )
 
@@ -87,6 +87,6 @@ async def update_child(
 )
 @router.delete("/{child_id}")
 async def delete_child(child_id: UUID, session: CurrentSession) -> Response:
-    child_to_delete = await child_db.get_or_404(session=session, id=child_id)
-    await child_db.delete(session=session, db_obj=child_to_delete)
+    child_to_delete = await child_manager.get_or_404(session=session, id=child_id)
+    await child_manager.delete(session=session, db_obj=child_to_delete)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
