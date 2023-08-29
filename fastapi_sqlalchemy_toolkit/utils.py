@@ -1,34 +1,41 @@
-from typing import Annotated, Any, Optional, Type
+from copy import deepcopy
+from typing import Annotated, Any, Optional, Type, TypeVar
 
 import pydantic
 from fastapi import Query
 
+BaseModelT = TypeVar("BaseModelT", bound=pydantic.BaseModel)
 
-class AllOptional(pydantic._internal._model_construction.ModelMetaclass):
+
+def _make_field_optional(
+    field: pydantic.fields.FieldInfo,
+) -> tuple[Any, pydantic.fields.FieldInfo]:
+    new = deepcopy(field)
+    new.default = (
+        None
+        if field.default == pydantic.pydantic_core.PydanticUndefined
+        else field.default
+    )
+    new.annotation = Optional[field.annotation]  # type: ignore
+    return (new.annotation, new)
+
+
+def make_partial_model(model: Type[BaseModelT]) -> Type[BaseModelT]:
     """
-    Метакласс, который делает все поля модели Pydantic необязательными.
+    Функция, создающая Pydantic модель из переданной,
+    делая все поля модели необязательными.
     Полезно для схем PATCH запросов.
     """
-
-    def __new__(
-        self, name: str, bases: tuple[type], namespaces: dict[str, Any], **kwargs
-    ):
-        annotations: dict = namespaces.get("__annotations__", {})
-
-        for base in bases:
-            for base_ in base.__mro__:
-                if base_ is pydantic.BaseModel:
-                    break
-
-                annotations.update(base_.__annotations__)
-
-        for field in annotations:
-            if not field.startswith("__"):
-                annotations[field] = Optional[annotations[field]]
-
-        namespaces["__annotations__"] = annotations
-
-        return super().__new__(self, name, bases, namespaces, **kwargs)
+    model = pydantic.create_model(  # type: ignore
+        f"Partial{model.__name__}",
+        __base__=model,
+        __module__=model.__module__,
+        **{
+            field_name: _make_field_optional(field_info)
+            for field_name, field_info in model.model_fields.items()
+        },
+    )
+    return model
 
 
 # Утилиты для передачи нескольких значений для фильтрации в одном

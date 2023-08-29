@@ -1,15 +1,20 @@
 from typing import Annotated
 from uuid import UUID
 
+from app.deps import get_async_session
+from app.managers import child_manager
+from app.models import Parent
+from app.schemas import (
+    CreateChildSchema,
+    HTTPErrorSchema,
+    PatchChildSchema,
+    RetrieveChildSchema,
+)
 from fastapi import APIRouter, Depends, Response, status
 from fastapi_pagination import Page, Params
 from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_async_session
-from app.managers import child_manager
-from app.models import Parent
-from app.schemas import CreateUpdateChildSchema, HTTPErrorSchema, RetrieveChildSchema
 
 router = APIRouter()
 
@@ -58,8 +63,8 @@ async def get_child(
 
 @router.post("")
 async def create_child(
-    child_in: CreateUpdateChildSchema, session: CurrentSession
-) -> CreateUpdateChildSchema:
+    child_in: CreateChildSchema, session: CurrentSession
+) -> CreateChildSchema:
     return await child_manager.create(session=session, in_obj=child_in)
 
 
@@ -71,8 +76,8 @@ async def create_child(
 )
 @router.patch("/{child_id}")
 async def update_child(
-    child_id: UUID, child_in: CreateUpdateChildSchema, session: CurrentSession
-) -> CreateUpdateChildSchema:
+    child_id: UUID, child_in: PatchChildSchema, session: CurrentSession
+) -> PatchChildSchema:
     child_to_update = await child_manager.get_or_404(session=session, id=child_id)
     return await child_manager.update(
         session=session, db_obj=child_to_update, in_obj=child_in

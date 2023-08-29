@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from fastapi_sqlalchemy_toolkit.utils import make_partial_model
 from pydantic import BaseModel
 
 
@@ -8,8 +9,11 @@ class ChildBaseSchema(BaseModel):
     slug: str
 
 
-class CreateUpdateChildSchema(ChildBaseSchema):
+class CreateChildSchema(ChildBaseSchema):
     parent_id: UUID
+
+
+PatchChildSchema = make_partial_model(CreateChildSchema)
 
 
 class ParentBaseSchema(BaseModel):
