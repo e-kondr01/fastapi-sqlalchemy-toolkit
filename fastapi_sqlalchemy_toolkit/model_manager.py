@@ -525,7 +525,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             query = {}
             for field in unique_constraint:
                 query[field] = in_obj[field]
-            object_exists = await self.exists(session, **query)
+            object_exists = await self.exists(
+                session, **query, id=FieldFilter(in_obj.get("id"), operator="__ne__")
+            )
             if object_exists:
                 conflicting_fields = ", ".join(unique_constraint)
                 raise HTTPException(
@@ -551,8 +553,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 if db_obj and getattr(db_obj, column.name) == in_obj[column.name]:
                     continue
                 attrs_to_check = {column.name: in_obj[column.name]}
-                check_unique = await self.exists(session=session, **attrs_to_check)
-                if check_unique:
+                object_exists = await self.exists(
+                    session=session,
+                    **attrs_to_check,
+                    id=FieldFilter(in_obj.get("id"), operator="__ne__"),
+                )
+                if object_exists:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=(
