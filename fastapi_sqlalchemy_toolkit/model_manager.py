@@ -53,7 +53,10 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if hasattr(self.model, "__table_args__"):
             for table_arg in self.model.__table_args__:
                 if isinstance(table_arg, UniqueConstraint):
-                    self.unique_constraints.append(table_arg.columns.keys())
+                    if table_arg.columns.keys():
+                        self.unique_constraints.append(table_arg.columns.keys())
+                    else:
+                        self.unique_constraints.append(table_arg._pending_colargs)
 
         self.reverse_relationships: dict[str, Type[Base]] = {}
         self.m2m_relationships: dict[str, Type[Base]] = {}
