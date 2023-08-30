@@ -4,7 +4,7 @@ from fastapi import HTTPException, status
 from fastapi_pagination.bases import AbstractPage, AbstractParams
 from fastapi_pagination.ext.async_sqlalchemy import paginate
 from pydantic import BaseModel
-from sqlalchemy import UniqueConstraint, func, select
+from sqlalchemy import Row, UniqueConstraint, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -237,7 +237,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         unique: bool = False,
         **attrs,
-    ) -> Any:
+    ) -> list[ModelType] | list[Row]:
         """
         Получение выборки экземпляров модели с фильтрами.
 
