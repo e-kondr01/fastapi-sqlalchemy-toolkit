@@ -139,7 +139,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         filter_expression = self.get_filter_expression(**attrs)
         statement = self.get_base_query().filter(filter_expression)
-        options = [options] if not isinstance(options, list) else options
+        if options is not None:
+            if not isinstance(options, list):
+                options = [options]
+        else:
+            options = []
         for option in options:
             statement = statement.options(option)
         order_by_expression = self.get_order_by_expression(order_by)
@@ -219,7 +223,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: пагинированная выборка объектов
         """
         base_query = self.get_base_query(**attrs, order_by=order_by)
-        options = [options] if not isinstance(options, list) else options
+        if options is not None:
+            if not isinstance(options, list):
+                options = [options]
+        else:
+            options = []
         joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by=order_by, options=options, where=where, **attrs
@@ -263,7 +271,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: выборка объектов
         """
         base_query = self.get_base_query(**attrs, order_by=order_by)
-        options = [options] if not isinstance(options, list) else options
+        if options is not None:
+            if not isinstance(options, list):
+                options = [options]
+        else:
+            options = []
         joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by, filter_by, options, where=where, **attrs
