@@ -139,12 +139,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         filter_expression = self.get_filter_expression(**attrs)
         statement = self.get_base_query().filter(filter_expression)
-        if options is not None:
-            if isinstance(options, list):
-                for option in options:
-                    statement = statement.options(option)
-            else:
-                statement = statement.options(options)
+        options = [options] if not isinstance(options, list) else options
+        for option in options:
+            statement = statement.options(option)
         order_by_expression = self.get_order_by_expression(order_by)
         if order_by_expression is not None:
             statement = statement.order_by(order_by_expression)
@@ -222,7 +219,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: пагинированная выборка объектов
         """
         base_query = self.get_base_query(**attrs, order_by=order_by)
-        joined_query = self.get_joins(base_query, order_by=order_by, **attrs)
+        options = [options] if not isinstance(options, list) else options
+        joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by=order_by, options=options, where=where, **attrs
         )
@@ -265,7 +263,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: выборка объектов
         """
         base_query = self.get_base_query(**attrs, order_by=order_by)
-        joined_query = self.get_joins(base_query, order_by=order_by, **attrs)
+        options = [options] if not isinstance(options, list) else options
+        joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by, filter_by, options, where=where, **attrs
         )
@@ -379,8 +378,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return select(self.model)
 
     def get_joins(
-        self, base_query: Select, order_by: OrderingField | None = None, **kwargs
-    ):
+        self,
+        base_query: Select,
+        options: list[Any],
+        order_by: OrderingField | None = None,
+        **kwargs,
+    ) -> Select:
         """
         Делает необходимые join'ы при фильтрации и сортировке по полям
         связанных моделей.
@@ -400,6 +403,15 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 joined_query = joined_query.outerjoin(
                     self.related_models[model]
                 ).options(contains_eager(self.related_models[model]))
+
+        # Если в .options передана стратегия загрузки модели,
+        # которая должна быть подгружена для фильтрации или сортировки,
+        # нужно убрать её из options для избежания конфликтов.
+        options[:] = [
+            option
+            for option in options
+            if str(option.path.entity.class_) not in models_to_join
+        ]
         return joined_query
 
     def get_order_by_expression(self, order_by: OrderingField | None):
@@ -483,12 +495,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 if isinstance(order_by_expression, tuple)
                 else query.order_by(order_by_expression)
             )
-        if options is not None:
-            if isinstance(options, list):
-                for option in options:
-                    query = query.options(option)
-            else:
-                query = query.options(options)
+        for option in options:
+            query = query.options(option)
         if where is not None:
             query = query.where(where)
         elif hasattr(self.model, "created_at"):
