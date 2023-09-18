@@ -361,6 +361,75 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await session.commit()
         return db_obj
 
+    async def bulk_create(
+        self, session: AsyncSession, in_objs: list[CreateSchemaType | dict], **attrs
+    ) -> list[ModelType]:
+        """
+        Создание экземпляров модели и сохранение в БД пачкой.
+        Также выполняет валидацию на уровне БД.
+
+        :param session: сессия SQLAlchemy
+
+        :param in_objs: список значений полей создаваемых экземпляров модели
+
+        :param attrs: дополнительные значения полей создаваемого экземпляра
+        (чтобы какие-то поля можно было установить напрямую из кода,
+        например, пользователя запроса)
+
+        :returns: список созданных экземпляров модели
+        """
+        objs = []
+        for in_obj in in_objs:
+            if not isinstance(in_obj, dict):
+                in_obj = in_obj.model_dump()
+            in_obj.update(**attrs)
+            await self.run_db_validation(in_obj=in_obj, session=session)
+            db_obj = self.model(**in_obj)
+            objs.append(db_obj)
+        session.add_all(objs)
+        await session.commit()
+        for db_obj in objs:
+            await session.refresh(db_obj)
+        return objs
+
+    async def bulk_update(
+        self, session: AsyncSession, in_objs: dict[ModelType, UpdateSchemaType], **attrs
+    ) -> list[ModelType]:
+        """
+        Обновление экземпляров модели в БД пачкой.
+        Также выполняет валидацию на уровне БД.
+
+        :param session: сессия SQLAlchemy
+
+        :param db_obj: обновляемый объект
+
+        :param in_objs: словарь обновляемых объектов, где ключ -- существующий объект,
+        значение -- схема Pydantic для обновления значений его полей.
+
+        :param attrs: дополнительные значения обновляемых полей
+        (чтобы какие-то поля можно было установить напрямую из кода,
+        например, пользователя запроса)
+
+        :returns: список обновлённых экземпляров модели
+        """
+        for obj, in_obj in in_objs.items():
+            if isinstance(in_obj, dict):
+                update_data = in_obj
+            else:
+                update_data = in_obj.model_dump()
+            update_data.update(attrs)
+            validated_data = await self.run_db_validation(
+                session=session, db_obj=obj, in_obj=update_data
+            )
+            for field in validated_data:
+                setattr(obj, field, validated_data[field])
+            session.add(obj)
+        await session.commit()
+        updated_objs = list(in_objs.keys())
+        for updated_obj in updated_objs:
+            await session.refresh(updated_obj)
+        return updated_objs
+
     ##################################################################################
     # Internal methods
     ##################################################################################
