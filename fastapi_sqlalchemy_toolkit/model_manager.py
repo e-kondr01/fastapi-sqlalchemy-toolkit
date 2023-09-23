@@ -83,6 +83,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         in_obj: CreateSchemaType | ModelDict,
         refresh_attribute_names: list[str] | None = None,
+        commit: bool = True,
         **attrs: Any,
     ) -> ModelType:
         """
@@ -95,6 +96,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param refresh_attribute_names: список полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
+
+        :param commit: нужно ли вызывать `session.commit()`
 
         :param attrs: дополнительные значения полей создаваемого экземпляра
         (чтобы какие-то поля можно было установить напрямую из кода,
@@ -111,7 +114,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         )
         db_obj = self.model(**validated_data)
         session.add(db_obj)
-        await session.commit()
+        if commit:
+            await session.commit()
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
@@ -310,6 +314,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         in_obj: UpdateSchemaType | ModelDict,
         refresh_attribute_names: list[str] | None = None,
+        commit: bool = True,
         **attrs,
     ) -> ModelType:
         """
@@ -329,6 +334,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param refresh_attribute_names: список полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
 
+        :param commit: нужно ли вызывать `session.commit()`
+
         :returns: обновлённый экземпляр модели
         """
         if isinstance(in_obj, dict):
@@ -343,12 +350,13 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for field in validated_data:
             setattr(db_obj, field, validated_data[field])
         session.add(db_obj)
-        await session.commit()
+        if commit:
+            await session.commit()
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def delete(
-        self, session: AsyncSession, db_obj: ModelType
+        self, session: AsyncSession, db_obj: ModelType, commit: bool = True
     ) -> ModelType | None:
         """
         Удаление экземпляра модели из БД.
@@ -356,13 +364,20 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param session: сессия SQLAlchemy
 
         :param db_obj: удаляемый объект
+
+        :param commit: нужно ли вызывать `session.commit()`
         """
         await session.delete(db_obj)
-        await session.commit()
+        if commit:
+            await session.commit()
         return db_obj
 
     async def bulk_create(
-        self, session: AsyncSession, in_objs: list[CreateSchemaType | dict], **attrs
+        self,
+        session: AsyncSession,
+        in_objs: list[CreateSchemaType | dict],
+        commit: bool = True,
+        **attrs,
     ) -> list[ModelType]:
         """
         Создание экземпляров модели и сохранение в БД пачкой.
@@ -371,6 +386,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param session: сессия SQLAlchemy
 
         :param in_objs: список значений полей создаваемых экземпляров модели
+
+        :param commit: нужно ли вызывать `session.commit()`
 
         :param attrs: дополнительные значения полей создаваемого экземпляра
         (чтобы какие-то поля можно было установить напрямую из кода,
@@ -387,13 +404,18 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             db_obj = self.model(**in_obj)
             objs.append(db_obj)
         session.add_all(objs)
-        await session.commit()
+        if commit:
+            await session.commit()
         for db_obj in objs:
             await session.refresh(db_obj)
         return objs
 
     async def bulk_update(
-        self, session: AsyncSession, in_objs: dict[ModelType, UpdateSchemaType], **attrs
+        self,
+        session: AsyncSession,
+        in_objs: dict[ModelType, UpdateSchemaType],
+        commit: bool = True,
+        **attrs,
     ) -> list[ModelType]:
         """
         Обновление экземпляров модели в БД пачкой.
@@ -405,6 +427,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param in_objs: словарь обновляемых объектов, где ключ -- существующий объект,
         значение -- схема Pydantic для обновления значений его полей.
+
+        :param commit: нужно ли вызывать `session.commit()`
 
         :param attrs: дополнительные значения обновляемых полей
         (чтобы какие-то поля можно было установить напрямую из кода,
@@ -424,7 +448,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             for field in validated_data:
                 setattr(obj, field, validated_data[field])
             session.add(obj)
-        await session.commit()
+        if commit:
+            await session.commit()
         updated_objs = list(in_objs.keys())
         for updated_obj in updated_objs:
             await session.refresh(updated_obj)
