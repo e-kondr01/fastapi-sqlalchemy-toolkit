@@ -12,9 +12,9 @@ from app.schemas import (
 )
 from fastapi import APIRouter, Depends, Response, status
 from fastapi_pagination import Page, Params
-from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
 
 router = APIRouter()
 
@@ -37,10 +37,10 @@ async def get_children(
     return await child_manager.paginated_filter(
         session=session,
         pagination_params=params,
-        title=FieldFilter(value=title, operator="ilike"),
+        title=FieldFilter(title, operator="ilike"),
         slug=slug,
-        parent_title=FieldFilter(value=parent_title, operator="ilike", model=Parent),
-        parent_slug=FieldFilter(value=parent_slug, model=Parent),
+        parent_title=FieldFilter(parent_title, operator="ilike", model=Parent),
+        parent_slug=FieldFilter(parent_slug, model=Parent),
         order_by=order_by,
     )
 

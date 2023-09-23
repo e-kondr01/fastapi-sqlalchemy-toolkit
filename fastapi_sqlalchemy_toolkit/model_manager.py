@@ -555,7 +555,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 continue
 
             if not isinstance(filter_options, FieldFilter):
-                filter_options = FieldFilter(value=filter_options)
+                filter_options = FieldFilter(filter_options)
 
             model = filter_options.model or self.model
             field = (
