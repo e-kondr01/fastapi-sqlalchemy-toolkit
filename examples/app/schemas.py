@@ -1,7 +1,8 @@
 from uuid import UUID
 
-from fastapi_sqlalchemy_toolkit.utils import make_partial_model
 from pydantic import BaseModel
+
+from fastapi_sqlalchemy_toolkit.utils import make_partial_model
 
 
 class ChildBaseSchema(BaseModel):
@@ -21,12 +22,12 @@ class ParentBaseSchema(BaseModel):
     slug: str
 
 
-class RetrieveChildSchema(ChildBaseSchema):
+class ChildListSchema(ChildBaseSchema):
+    id: UUID
+
+
+class ChildDetailSchema(ChildListSchema):
     parent: ParentBaseSchema
-
-
-class RetrieveParentSchema(ParentBaseSchema):
-    children: list[ChildBaseSchema] | None
 
 
 class HTTPErrorSchema(BaseModel):
