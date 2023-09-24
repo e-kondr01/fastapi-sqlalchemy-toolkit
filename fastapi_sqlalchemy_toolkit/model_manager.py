@@ -124,8 +124,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         options: list[Any] | Any | None = None,
         order_by: OrderingField | None = None,
+        select_: Select | None = None,
         **attrs,
-    ) -> ModelType | None:
+    ) -> ModelType | Row | None:
         """
         Получение одного экземпляра модели при существовании
 
@@ -135,14 +136,18 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
+        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        экземпляр Row, а не ModelType.
+
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
         точного сравнения либо экземпляром FieldFilter.
 
-        :returns: экземпляр модели или None, если подходящего нет в БД
+        :returns: экземпляр модели, Row или None, если подходящего нет в БД
         """
+        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
         filter_expression = self.get_filter_expression(**attrs)
-        statement = self.get_base_query().filter(filter_expression)
+        statement = statement.filter(filter_expression)
         if options is not None:
             if not isinstance(options, list):
                 options = [options]
@@ -154,9 +159,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if order_by_expression is not None:
             statement = statement.order_by(order_by_expression)
         result = await session.execute(statement=statement)
-        return result.scalars().first()
 
-    async def get_or_404(self, session: AsyncSession, **attrs) -> ModelType:
+        if select_ is None:
+            return result.scalars().first()
+        return result.first()
+
+    async def get_or_404(self, session: AsyncSession, **attrs) -> ModelType | Row:
         """
         Получение одного экземпляра модели или возвращение HTTP ответа 404.
 
@@ -164,7 +172,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: все параметры, которые можно передать в метод get
 
-        :returns: экземпляр модели
+        :returns: экземпляр модели или Row
 
         :raises: fastapi.HTTPException 404
         """
@@ -202,8 +210,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         order_by: OrderingField | None = None,
         options: list[Any] | Any | None = None,
         where: Any | None = None,
+        select_: Select | None = None,
         **attrs,
-    ) -> AbstractPage[ModelType]:
+    ) -> AbstractPage[ModelType | Row]:
         """
         Получение выборки экземпляров модели с фильтрами и пагинацией.
 
@@ -220,19 +229,22 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         которые нельзя передать в attrs.
         Например, для фильтрации с использованием метода .any() у поля-связи модели.
 
+        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        страницу Row, а не ModelType.
+
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
         точного сравнения либо экземпляром FieldFilter.
 
-        :returns: пагинированная выборка объектов
+        :returns: пагинированная выборка объектов или Row
         """
-        base_query = self.get_base_query(**attrs, order_by=order_by)
+        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
         if options is not None:
             if not isinstance(options, list):
                 options = [options]
         else:
             options = []
-        joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
+        joined_query = self.get_joins(statement, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by=order_by, options=options, where=where, **attrs
         )
@@ -246,6 +258,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options: list[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
+        select_: Select | None = None,
         **attrs,
     ) -> list[ModelType] | list[Row]:
         """
@@ -268,26 +281,32 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
 
+        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        список Row, а не ModelType.
+
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
         точного сравнения либо экземпляром FieldFilter.
 
-        :returns: выборка объектов
+        :returns: выборка объектов или Row
         """
-        base_query = self.get_base_query(**attrs, order_by=order_by)
+        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
         if options is not None:
             if not isinstance(options, list):
                 options = [options]
         else:
             options = []
-        joined_query = self.get_joins(base_query, options, order_by=order_by, **attrs)
+        joined_query = self.get_joins(statement, options, order_by=order_by, **attrs)
         query = self.get_list_query(
             joined_query, order_by, filter_by, options, where=where, **attrs
         )
         list_objects = await session.execute(query)
-        if unique:
-            return list_objects.scalars().unique().all()
-        return list_objects.scalars().all()
+
+        if select_ is None:
+            if unique:
+                return list_objects.scalars().unique().all()
+            return list_objects.scalars().all()
+        return list_objects.all()
 
     async def count(self, session: AsyncSession, **attrs) -> int:
         """
@@ -480,7 +499,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         await self.validate_unique_constraints(session, in_obj)
         return in_obj
 
-    def get_base_query(self, **kwargs) -> Select:
+    def get_select(self, select_: Select | None = None, **kwargs) -> Select:
+        if select_ is not None:
+            return select_
         return select(self.model)
 
     def get_joins(
