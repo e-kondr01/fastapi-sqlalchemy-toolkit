@@ -68,13 +68,12 @@ async def create_child(
     return await child_manager.create(session=session, in_obj=child_in)
 
 
-@router.get(
+@router.patch(
     "/{child_id}",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
     },
 )
-@router.patch("/{child_id}")
 async def update_child(
     child_id: UUID, child_in: PatchChildSchema, session: CurrentSession
 ) -> PatchChildSchema:
@@ -84,13 +83,12 @@ async def update_child(
     )
 
 
-@router.get(
+@router.delete(
     "/{child_id}",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
     },
 )
-@router.delete("/{child_id}")
 async def delete_child(child_id: UUID, session: CurrentSession) -> Response:
     child_to_delete = await child_manager.get_or_404(session=session, id=child_id)
     await child_manager.delete(session=session, db_obj=child_to_delete)
