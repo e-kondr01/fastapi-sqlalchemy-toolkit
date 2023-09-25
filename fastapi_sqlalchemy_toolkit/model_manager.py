@@ -1,4 +1,4 @@
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, Iterable, Type, TypeVar
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import AbstractPage, AbstractParams
@@ -82,7 +82,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         in_obj: CreateSchemaType | ModelDict,
-        refresh_attribute_names: list[str] | None = None,
+        refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
         **attrs: Any,
     ) -> ModelType:
@@ -94,7 +94,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param in_obj: значения полей создаваемого экземпляра модели в словаре
 
-        :param refresh_attribute_names: список полей, которые нужно обновить
+        :param refresh_attribute_names: названия полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
 
         :param commit: нужно ли вызывать `session.commit()`
@@ -332,7 +332,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         db_obj: ModelType,
         in_obj: UpdateSchemaType | ModelDict,
-        refresh_attribute_names: list[str] | None = None,
+        refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
         **attrs,
     ) -> ModelType:
@@ -350,7 +350,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         (чтобы какие-то поля можно было установить напрямую из кода,
         например, пользователя запроса)
 
-        :param refresh_attribute_names: список полей, которые нужно обновить
+        :param refresh_attribute_names: названия полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
 
         :param commit: нужно ли вызывать `session.commit()`
