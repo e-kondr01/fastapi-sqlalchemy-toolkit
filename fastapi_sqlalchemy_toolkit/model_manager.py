@@ -1,4 +1,4 @@
-from typing import Any, Generic, Iterable, Type, TypeVar
+from typing import Any, Generic, Iterable, List, Type, TypeVar
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import AbstractPage, AbstractParams
@@ -49,7 +49,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.fk_mapping = fk_mapping
         self.default_ordering = default_ordering
 
-        self.unique_constraints: list[list[str]] = []
+        self.unique_constraints: List[List[str]] = []
         if hasattr(self.model, "__table_args__"):
             for table_arg in self.model.__table_args__:
                 if isinstance(table_arg, UniqueConstraint):
@@ -122,7 +122,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def get(
         self,
         session: AsyncSession,
-        options: list[Any] | Any | None = None,
+        options: List[Any] | Any | None = None,
         order_by: OrderingField | None = None,
         select_: Select | None = None,
         **attrs,
@@ -138,6 +138,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         экземпляр Row, а не ModelType.
+        Примечание: фильтрация и сортировка по связанным моделям скорее всего не будут работать
+        вместе с этим параметром.
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
@@ -203,18 +205,19 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await session.execute(statement=statement)
         return result.first() is not None
 
-    async def paginated_filter(
+    async def paginated_list(
         self,
         session: AsyncSession,
         pagination_params: AbstractParams | None = None,
         order_by: OrderingField | None = None,
-        options: list[Any] | Any | None = None,
+        options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
+        filter_by_null: bool = False,
         **attrs,
     ) -> AbstractPage[ModelType | Row]:
         """
-        Получение выборки экземпляров модели с фильтрами и пагинацией.
+        Получение списка объектов с фильтрами и пагинацией.
 
         :param session: сессия SQLAlchemy
 
@@ -231,12 +234,18 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelType.
+        Примечание: фильтрация и сортировка по связанным моделям скорее всего не будут работать
+        вместе с этим параметром.
+
+        :param filter_by_null: если False, то параметры фильтрации со значением None
+        будут пропускаться. Если True, то параметры фильтрации со значением None
+        будут применены как фильтр по null.
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
         точного сравнения либо экземпляром FieldFilter.
 
-        :returns: пагинированная выборка объектов или Row
+        :returns: пагинированный список объектов или Row
         """
         statement = self.get_select(select_=select_, order_by=order_by, **attrs)
         if options is not None:
@@ -244,25 +253,37 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 options = [options]
         else:
             options = []
-        joined_query = self.get_joins(statement, options, order_by=order_by, **attrs)
+        joined_query = self.get_joins(
+            statement,
+            options,
+            order_by=order_by,
+            filter_by_null=filter_by_null,
+            **attrs,
+        )
         query = self.get_list_query(
-            joined_query, order_by=order_by, options=options, where=where, **attrs
+            joined_query,
+            order_by=order_by,
+            options=options,
+            where=where,
+            filter_by_null=filter_by_null,
+            **attrs,
         )
         return await paginate(session, query, pagination_params)
 
-    async def filter(
+    async def list(
         self,
         session: AsyncSession,
         order_by: OrderingField | None = None,
         filter_by: dict | None = None,
-        options: list[Any] | Any | None = None,
+        options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
         select_: Select | None = None,
+        filter_by_null: bool = False,
         **attrs,
-    ) -> list[ModelType] | list[Row]:
+    ) -> List[ModelType] | List[Row]:
         """
-        Получение выборки экземпляров модели с фильтрами.
+        Получение списка объектов с фильтрами.
 
         :param session: сессия SQLAlchemy
 
@@ -283,12 +304,18 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         список Row, а не ModelType.
+        Примечание: фильтрация и сортировка по связанным моделям скорее всего не будут работать
+        вместе с этим параметром.
+
+        :param filter_by_null: если False, то параметры фильтрации со значением None
+        будут пропускаться. Если True, то параметры фильтрации со значением None
+        будут применены как фильтр по null.
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
         точного сравнения либо экземпляром FieldFilter.
 
-        :returns: выборка объектов или Row
+        :returns: список объектов или Row
         """
         statement = self.get_select(select_=select_, order_by=order_by, **attrs)
         if options is not None:
@@ -296,9 +323,21 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 options = [options]
         else:
             options = []
-        joined_query = self.get_joins(statement, options, order_by=order_by, **attrs)
+        joined_query = self.get_joins(
+            statement,
+            options,
+            order_by=order_by,
+            filter_by_null=filter_by_null,
+            **attrs,
+        )
         query = self.get_list_query(
-            joined_query, order_by, filter_by, options, where=where, **attrs
+            joined_query,
+            order_by,
+            filter_by,
+            options,
+            where=where,
+            filter_by_null=filter_by_null,
+            **attrs,
         )
         list_objects = await session.execute(query)
 
@@ -308,11 +347,49 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return list_objects.scalars().all()
         return list_objects.all()
 
-    async def count(self, session: AsyncSession, **attrs) -> int:
+    async def filter(
+        self,
+        session: AsyncSession,
+        order_by: OrderingField | None = None,
+        filter_by: dict | None = None,
+        options: List[Any] | Any | None = None,
+        where: Any | None = None,
+        unique: bool = False,
+        select_: Select | None = None,
+        **attrs,
+    ) -> List[ModelType] | List[Row]:
+        """
+        Получение списка объектов с фильтрами, включая фильтрацию по None.
+        Для документации параметров см. метод `list`.
+
+        Предлагается метод `list` использовать в API эндпоинтах, где
+        требуется поддержка необязательных квери параметров,
+        а метод `filter` использовать в методах ModelManager для
+        ожидаемого поведения фильтрации по None.
+        """
+        return await self.list(
+            session,
+            order_by=order_by,
+            filter_by=filter_by,
+            options=options,
+            where=where,
+            unique=unique,
+            select_=select_,
+            filter_by_null=True,
+            attrs=attrs,
+        )
+
+    async def count(
+        self, session: AsyncSession, filter_by_null: bool = False, **attrs
+    ) -> int:
         """
         Возвращает количество экземпляров модели по данным фильтрам.
 
         :param session: сессия SQLAlchemy
+
+        :param filter_by_null: если False, то параметры фильтрации со значением None
+        будут пропускаться. Если True, то параметры фильтрации со значением None
+        будут применены как фильтр по null.
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
@@ -321,7 +398,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: количество объектов по переданным фильтрам
         """
         query = select(func.count(self.model.id))
-        filter_expression = self.get_filter_expression(**attrs)
+        filter_expression = self.get_filter_expression(
+            filter_by_null=filter_by_null, **attrs
+        )
         if filter_expression is not None:
             query = query.filter(filter_expression)
         amount = await session.execute(query)
@@ -394,10 +473,10 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def bulk_create(
         self,
         session: AsyncSession,
-        in_objs: list[CreateSchemaType | dict],
+        in_objs: List[CreateSchemaType | dict],
         commit: bool = True,
         **attrs,
-    ) -> list[ModelType]:
+    ) -> List[ModelType]:
         """
         Создание экземпляров модели и сохранение в БД пачкой.
         Также выполняет валидацию на уровне БД.
@@ -435,7 +514,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         in_objs: dict[ModelType, UpdateSchemaType],
         commit: bool = True,
         **attrs,
-    ) -> list[ModelType]:
+    ) -> List[ModelType]:
         """
         Обновление экземпляров модели в БД пачкой.
         Также выполняет валидацию на уровне БД.
@@ -507,8 +586,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get_joins(
         self,
         base_query: Select,
-        options: list[Any],
+        options: List[Any],
         order_by: OrderingField | None = None,
+        filter_by_null: bool = True,
         **kwargs,
     ) -> Select:
         """
@@ -523,7 +603,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if self.default_ordering and self.default_ordering.parent.class_ != self.model:
             models_to_join.add(str(self.default_ordering.parent.class_))
         for filter in kwargs.values():
-            if isinstance(filter, FieldFilter) and filter and filter.model:
+            if (
+                isinstance(filter, FieldFilter)
+                and filter.model
+                and (filter_by_null or filter.filter_by_null)
+            ):
                 models_to_join.add(str(filter.model))
         for model in models_to_join:
             if model in self.related_models:
@@ -549,7 +633,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return self.default_ordering
 
     def add_reverse_relation_filter_expression(
-        self, field_name: str, filter_options, filters: list
+        self, field_name: str, filter_options, filters: List
     ):
         relationship = getattr(self.model, field_name)
         filter_expression = relationship.any(
@@ -558,16 +642,20 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filters.append(filter_expression)
 
     def get_filter_expression(
-        self, **kwargs: FieldFilter | Any
+        self, filter_by_null: bool = True, **kwargs: FieldFilter | Any
     ) -> BooleanClauseList | None:
-        filters: list[BinaryExpression] = []
+        filters: List[BinaryExpression] = []
         for field_name, filter_options in kwargs.items():
-            if (
-                filter_options is None
-                or isinstance(filter_options, FieldFilter)
-                and filter_options.value is None
-            ):
-                continue
+            if isinstance(filter_options, FieldFilter):
+                if (
+                    filter_options.value is None
+                    and not filter_by_null
+                    and not filter_options.filter_by_null
+                ):
+                    continue
+            else:
+                if filter_options is None and not filter_by_null:
+                    continue
 
             if field_name in self.reverse_relationships:
                 self.add_reverse_relation_filter_expression(
@@ -607,11 +695,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filter_by: dict | None = None,
         options: Any | None = None,
         where: Any | None = None,
+        filter_by_null: bool = True,
         **attrs,
     ):
         query = base_query
         order_by_expression = self.get_order_by_expression(order_by)
-        filter_expression = self.get_filter_expression(**attrs)
+        filter_expression = self.get_filter_expression(
+            filter_by_null=filter_by_null, **attrs
+        )
         if filter_expression is not None:
             query = query.filter(filter_expression)
         if filter_by is not None:

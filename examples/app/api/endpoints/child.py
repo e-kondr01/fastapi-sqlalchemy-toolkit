@@ -13,7 +13,6 @@ from app.schemas import (
 )
 from fastapi import APIRouter, Depends, Response, status
 from fastapi_pagination import Page, Params
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -37,17 +36,17 @@ async def get_children(
     parent_title: str | None = None,
     parent_slug: str | None = None,
 ) -> Page[ChildListSchema]:
-    return await child_manager.paginated_filter(
+    return await child_manager.paginated_list(
         # Обязательные параметры
         session=session,
         pagination_params=params,
-        # Выборка столбцов
-        select_=select(Child.title, Child.slug, Child.id),
         # Фильтры
         title=FieldFilter(title, operator="ilike"),
         slug=slug,
-        parent_title=FieldFilter(parent_title, operator="ilike", model=Parent),
-        parent_slug=FieldFilter(parent_slug, model=Parent),
+        parent_title=FieldFilter(
+            parent_title, operator="ilike", model=Parent, alias="title"
+        ),
+        parent_slug=FieldFilter(parent_slug, model=Parent, alias="slug"),
         # Сортировка
         order_by=order_by,
     )
