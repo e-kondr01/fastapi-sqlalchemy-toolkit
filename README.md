@@ -251,11 +251,18 @@ not_deleted_objects = await my_object_manager.list(
     filter_by_null=True
 )
 ```
-будет возвращать те объекты, у которых `filter_by IS NULL`, то нужно использовать параметр
+будет возвращать те объекты, у которых `deleted_at IS NULL`, то нужно использовать параметр
 `filter_by_null=True`. 
 
 **Альтернативно** предлагается использовать метод `.filter()`, который аналогичен методу `.list()`
-с той разницей, что метод `.filter()` всегда имеет `filter_by_null=True`.
+с той разницей, что метод `.filter()` всегда имеет `filter_by_null=True`:
+
+```python
+not_deleted_objects = await my_object_manager.filter(
+    session,
+    deleted_at=None
+)
+```
 
 ### Фильтрация по обратным связям
 Также в методах `list` и `paginated_list` есть поддержка фильтрации
