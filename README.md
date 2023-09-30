@@ -216,7 +216,7 @@ async def get_my_objects(
 у которых `user_id IS NULL`. Аналогично с методом `paginated_list`.
 
 Для того чтобы только часть квери параметров вызывала фильтрацию по `null`,
-можно использовать параметр `FieldFilter`:
+можно использовать параметр `filter_by_null` класса `FieldFilter`:
 
 ```python
 from fastapi_sqlalchemy_toolkit import FieldFilter
@@ -254,7 +254,7 @@ not_deleted_objects = await my_object_manager.list(
 будет возвращать те объекты, у которых `filter_by IS NULL`, то нужно использовать параметр
 `filter_by_null=True`. 
 
-*Альтернативно* предлагается использовать метод `.filter()`, который аналогичен методу `.list()`
+**Альтернативно** предлагается использовать метод `.filter()`, который аналогичен методу `.list()`
 с той разницей, что метод `.filter()` всегда имеет `filter_by_null=True`.
 
 ### Фильтрация по обратным связям
