@@ -171,53 +171,24 @@ await parent_manager.list(
 
 ### Фильтрация по `null` и необязательные квери параметры
 
-Рассмотрим три сценария:
+Для получения списка объектов в `fastapi-sqlalchemy-toolkit` могут
+использоваться два метода: `list` и `filter`. Их отличие в том, что
+`list` **игнорирует** параметры фильтрации со значением `None`,
+в то время как `filter` **применяет** параметры фильтрации 
+со значением `None` как SQL фильтр по `NULL`.
+
+
+Таким образом, метод `list` подходит для использования в **API эндпоинтах**,
+где зачастую нужны необязательные квери параметры. Метод `filter`
+подходит для использования в качестве аналогичного метода **ORM** SQLAlchemy
+(в методах менеджеров и т. п.).
+
+
+Метод `paginated_list` в этом смысле ведёт себя аналогично методу `list`.
+
+**Примеры**:
 
 1. Эндпоинт с необязательными квери параметрами:
-```python
-from fastapi_sqlalchemy_toolkit import FieldFilter
-
-from app.managers import my_object_manager
-
-@router.get("/my-objects")
-async def get_my_objects(
-    session: CurrentSession,
-    user_id: UUID | None = None,
-) -> list[MyObjectListSchema]:
-    return await my_object_manager.list(
-        session,
-        user_id=user_id,
-    )
-```
-
-При запросе `GET /my-objects` без квери параметров вернутся все объекты `MyObject`, т. е. фильтр
-по `user_id` не будет применён. Аналогично с методом `paginated_list`.
-
-2. Эндпоинт с возможностью фильтрации по `null`
-
-```python
-from fastapi_sqlalchemy_toolkit import FieldFilter
-
-from app.managers import my_object_manager
-
-@router.get("/my-objects")
-async def get_my_objects(
-    session: CurrentSession,
-    user_id: UUID | None = None,
-) -> list[MyObjectListSchema]:
-    return await my_object_manager.list(
-        session,
-        user_id=user_id,
-        filter_by_null=True
-    )
-```
-
-При запросе `GET /my-objects` без квери параметров вернутся объекты `MyObject`,
-у которых `user_id IS NULL`. Аналогично с методом `paginated_list`.
-
-Для того чтобы только часть квери параметров вызывала фильтрацию по `null`,
-можно использовать параметр `filter_by_null` класса `FieldFilter`:
-
 ```python
 from fastapi_sqlalchemy_toolkit import FieldFilter
 
@@ -231,38 +202,65 @@ async def get_my_objects(
 ) -> list[MyObjectListSchema]:
     return await my_object_manager.list(
         session,
-        user_id=FieldFilter(user_id, filter_by_null=True),
-        title=title
+        user_id=user_id,
+        title=FieldFilter(title, operator="icontains")
     )
 ```
 
-При запросе `GET /my-objects` без квери параметров вернутся объекты `MyObject`,
-у которых `user_id IS NULL`, а фильтр по `title` не будет применён. Аналогично с методом `paginated_list`.
+Использование метода `list` обеспечивает, что при запросе `GET /my-objects`
+без квери параметров вернутся все объекты `MyObject`, т. е. фильтры
+по `user_id` и `title` не будет применён.
 
 
-3. Фильтрация по `null` при использовании `ModeManager` как ORM
-
-Если в методах `ModelManager` нужно получить список объектов с ожидаемым поведением фильтрации,
-где:
-```python
-not_deleted_objects = await my_object_manager.list(
-    session,
-    deleted_at=None,
-    filter_by_null=True
-)
-```
-будет возвращать те объекты, у которых `deleted_at IS NULL`, то нужно использовать параметр
-`filter_by_null=True`. 
-
-**Альтернативно** предлагается использовать метод `.filter()`, который аналогичен методу `.list()`
-с той разницей, что метод `.filter()` всегда имеет `filter_by_null=True`:
+2. Фильтрация по `null` при использовании `ModelManager` как ORM:
 
 ```python
-not_deleted_objects = await my_object_manager.filter(
-    session,
-    deleted_at=None
-)
+    async def my_manager_method(self, session):
+        not_deleted_objects = await my_object_manager.filter(
+            session,
+            deleted_at=None,
+        )
+
+        ...
 ```
+
+Использование метода `filter` обеспечивает, что 
+`note_deleted_objects` содержит те объекты, у которых `"deleted_at" IS NULL`.
+
+
+3. Эндпоинт с возможностью фильтрации по `null` через квери параметры:
+
+```python
+from datetime import datetime
+
+from fastapi_sqlalchemy_toolkit import FieldFilter, 
+
+from app.managers import my_object_manager
+
+@router.get("/my-objects")
+async def get_my_objects(
+    session: CurrentSession,
+    user_id: UUID | None = None,
+    deleted_at: datetime | NullableQuery | None = None
+) -> list[MyObjectListSchema]:
+    return await my_object_manager.list(
+        session,
+        user_id=user_id,
+        deleted_at=FieldFilter(deleted_at, nullable_q=True)
+    )
+```
+
+Если необходима фильтрация значения поля по `null` через квери параметр,
+то необходимо указать тип соответствующего аргумента как `fastapi_sqlalchemy_toolkit.NullableQuery`,
+а также в его `FieldFilter` передать параметр `nullable_q=True`.
+
+`NullableQuery` -- это пустая строка и строка `"null"`
+
+
+Теперь при запросе `GET /my-objects?deleted_at=` или `GET /my-objects?deleted_at=null`
+вернутся объекты `MyObject`, у которых `"deleted_at" IS NULL`.
+
+Аналогично для метода `paginated_list`.
 
 ### Фильтрация по обратным связям
 Также в методах `list` и `paginated_list` есть поддержка фильтрации

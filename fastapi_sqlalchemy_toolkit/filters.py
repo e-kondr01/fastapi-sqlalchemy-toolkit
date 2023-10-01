@@ -1,8 +1,11 @@
-from typing import Any, Callable, Type
+from typing import Any, Callable, Literal, Type
 
 from dateutil import parser
 
 from .base_model import Base
+
+NullableQuery = Literal["", "null"]
+null_query_values = ("", "null")
 
 
 class FieldFilter:
@@ -17,7 +20,7 @@ class FieldFilter:
         func: Callable | None = None,
         model: Type[Base] | None = None,
         alias: str | None = None,
-        filter_by_null: bool = False,
+        nullable_q: bool = False,
     ) -> None:
         """
         :param value: Значение поля
@@ -33,18 +36,17 @@ class FieldFilter:
         (по умолчанию название параметра, по которому фильтр
         передаётся в методы ModelManager)
 
-        :param filter_by_null: если установить как True, то фильтрация этого поля
-        по null будет применяться, даже если filter_by_null методов
-        ModelManager будет установлена на False.
-        Используется для поддержки возможности фильтрации по null
-        конкретных (но не всех) полей фильтрации
+        :param nullable_q: если установить True, то при значении параметра
+        `value` из `null_query_values` это поле будет
+        генерировать SQL-выражение IS NULL
+        (фильтровать по null)
         """
         self.value = value
         self.operator = operator
         self.func = func
         self.model = model
         self.alias = alias
-        self.filter_by_null = filter_by_null
+        self.nullable_q = nullable_q
 
         # Приводим значение поля к формату, который ожидает SQLAlchemy
         if value:
