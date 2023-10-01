@@ -233,7 +233,7 @@ async def get_my_objects(
 ```python
 from datetime import datetime
 
-from fastapi_sqlalchemy_toolkit import FieldFilter, 
+from fastapi_sqlalchemy_toolkit import FieldFilter, NullableQuery
 
 from app.managers import my_object_manager
 
@@ -254,7 +254,7 @@ async def get_my_objects(
 то необходимо указать тип соответствующего аргумента как `fastapi_sqlalchemy_toolkit.NullableQuery`,
 а также в его `FieldFilter` передать параметр `nullable_q=True`.
 
-`NullableQuery` -- это пустая строка и строка `"null"`
+`NullableQuery` -- это пустая строка или строка `"null"`
 
 
 Теперь при запросе `GET /my-objects?deleted_at=` или `GET /my-objects?deleted_at=null`
