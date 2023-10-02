@@ -438,7 +438,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: список объектов или Row
         """
         attrs = self.handle_optional_filters(**attrs)
-        return self.filter(
+        return await self.filter(
             session,
             order_by=order_by,
             filter_by=filter_by,
