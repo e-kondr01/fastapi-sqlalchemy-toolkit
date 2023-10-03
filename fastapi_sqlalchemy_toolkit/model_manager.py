@@ -155,6 +155,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 options = [options]
         else:
             options = []
+        statement = self.get_joins(statement, options, order_by=order_by, **attrs)
         for option in options:
             statement = statement.options(option)
         order_by_expression = self.get_order_by_expression(order_by)
@@ -204,6 +205,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         filter_expression = self.get_filter_expression(**attrs)
         statement = select(self.model.id).filter(filter_expression)
+        statement = self.get_joins(statement, **attrs)
         result = await session.execute(statement=statement)
         return result.first() is not None
 
@@ -466,6 +468,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         filter_expression = self.get_filter_expression(**attrs)
         if filter_expression is not None:
             query = query.filter(filter_expression)
+        query = self.get_joins(query, **attrs)
         amount = await session.execute(query)
         return amount.scalars().first() or 0
 
