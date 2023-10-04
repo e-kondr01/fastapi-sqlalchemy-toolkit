@@ -663,7 +663,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         joined_query = base_query
         models_to_join = set()
-        if order_by and not isinstance(order_by.field, str):
+        if (
+            order_by
+            and not isinstance(order_by.field, str)
+            and order_by.field.parent.class_ != self.model
+        ):
             models_to_join.add(str(order_by.field.parent.class_))
         if self.default_ordering and self.default_ordering.parent.class_ != self.model:
             models_to_join.add(str(self.default_ordering.parent.class_))
