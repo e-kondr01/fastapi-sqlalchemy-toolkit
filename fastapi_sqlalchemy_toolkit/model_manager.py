@@ -26,7 +26,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(
         self,
         model: Type[ModelType],
-        fk_mapping: dict[str, Type[Base]] | None = None,
         default_ordering: InstrumentedAttribute | None = None,
     ) -> None:
         """
@@ -34,20 +33,16 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param model: модель SQLAlchemy
 
-        :param fk_mapping: словарь, который соотносит названия полей модели,
-        которые являются внешними ключами, и модели SQLAlchemy,
-        на которые ключи ссылаются.
-        Этот параметр нужно определить для валидации внешних ключей.
-        Например, если ModelManager создаётся для модели Child, которая имеет
-        внешний ключ parent_id на модель Parent, то нужно передать
-        fk_mapping={"parent_id": Parent}
-
         :param default_ordering: поле модели, по которому должна выполняться
         сортировка по умолчанию
         """
         self.model = model
-        self.fk_mapping = fk_mapping
         self.default_ordering = default_ordering
+
+        # str() of fk attr to related model
+        # "parent_id": Parent
+        # Используется для валидации существования FK при создании/обновлении объекта
+        self.fk_name_to_model: dict[str, Type[Base]] = {}
 
         self.unique_constraints: List[List[str]] = []
         if hasattr(self.model, "__table_args__"):
@@ -60,19 +55,40 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         self.reverse_relationships: dict[str, Type[Base]] = {}
         self.m2m_relationships: dict[str, Type[Base]] = {}
-        self.related_models: dict[str, InstrumentedAttribute] = {}
+        # Model to related attr
+        # Parent : Child.parent
+        # Используется при составлении join'ов для фильтрации и сортировки
+        self.models_to_relationship_attrs: dict[Type[Base], InstrumentedAttribute] = {}
+
+        # tablename of Table to str() of fk attr
+        # "parent": "parent_id"
+        # Используется для того чтобы соединить название поле fk
+        # с Mapper классом модели, на который оно ссылается
+        table_names_to_fk_names: dict[str, InstrumentedAttribute] = {}
+        attr: InstrumentedAttribute
         for attr_name, attr in self.model.__dict__.items():
             # Перебираем только атрибуты модели
             if not attr_name.startswith("_"):
-                # Выбираем связи
+                # Обрабатываем связи
                 if hasattr(attr, "prop") and isinstance(attr.prop, Relationship):
-                    self.related_models[str(attr.prop.mapper.class_)] = attr
+                    self.models_to_relationship_attrs[attr.prop.mapper.class_] = attr
                     # Выбираем обратные связи (ManyToOne, ManyToMany)
                     if attr.prop.collection_class == list:
                         self.reverse_relationships[attr_name] = attr.prop.mapper.class_
                     # Выбираем  ManyToMany связи
                     if getattr(attr.prop, "secondary") is not None:
                         self.m2m_relationships[attr_name] = attr.prop.mapper.class_
+
+                # Обрабатываем FK
+                if hasattr(attr, "foreign_keys") and attr.foreign_keys:
+                    table_names_to_fk_names[
+                        str(next(iter(attr.foreign_keys)).column.table)
+                    ] = str(attr).split(".")[1]
+        for rel_table in self.models_to_relationship_attrs.keys():
+            if rel_table.__tablename__ in table_names_to_fk_names:
+                self.fk_name_to_model[
+                    table_names_to_fk_names[rel_table.__tablename__]
+                ] = rel_table
 
     ##################################################################################
     # Public API
@@ -636,7 +652,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             db_obj_dict = db_obj.to_dict()
             db_obj_dict.update(in_obj)
             in_obj = db_obj_dict
-        if self.fk_mapping:
+        if self.fk_name_to_model:
             await self.validate_fk_exists(session, in_obj)
         if self.m2m_relationships:
             await self.handle_m2m_fields(session, in_obj)
@@ -668,17 +684,17 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             and not isinstance(order_by.field, str)
             and order_by.field.parent.class_ != self.model
         ):
-            models_to_join.add(str(order_by.field.parent.class_))
+            models_to_join.add(order_by.field.parent.class_)
         if self.default_ordering and self.default_ordering.parent.class_ != self.model:
-            models_to_join.add(str(self.default_ordering.parent.class_))
+            models_to_join.add(self.default_ordering.parent.class_)
         for filter in kwargs.values():
             if isinstance(filter, FieldFilter) and filter.model:
-                models_to_join.add(str(filter.model))
+                models_to_join.add(filter.model)
         for model in models_to_join:
-            if model in self.related_models:
+            if model in self.models_to_relationship_attrs:
                 joined_query = joined_query.outerjoin(
-                    self.related_models[model]
-                ).options(contains_eager(self.related_models[model]))
+                    self.models_to_relationship_attrs[model]
+                ).options(contains_eager(self.models_to_relationship_attrs[model]))
 
         # Если в .options передана стратегия загрузки модели,
         # которая должна быть подгружена для фильтрации или сортировки,
@@ -686,7 +702,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options[:] = [
             option
             for option in options
-            if str(option.path.entity.class_) not in models_to_join
+            if option.path.entity.class_ not in models_to_join
         ]
         return joined_query
 
@@ -803,17 +819,17 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
 
         for key in in_obj:
-            if key in self.fk_mapping and in_obj[key] is not None:
+            if key in self.fk_name_to_model and in_obj[key] is not None:
                 related_object_exists = await session.get(
-                    self.fk_mapping[key],
+                    self.fk_name_to_model[key],
                     in_obj[key],
-                    options=[load_only(self.fk_mapping[key].id)],
+                    options=[load_only(self.fk_name_to_model[key].id)],
                 )
                 if not related_object_exists:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                         detail=(
-                            f"{self.fk_mapping[key].__tablename__} с id "
+                            f"{self.fk_name_to_model[key].__tablename__} с id "
                             f"{in_obj[key]} не существует."
                         ),
                     )

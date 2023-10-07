@@ -45,20 +45,6 @@ from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```
 
-При инициализации ModelManager можно задать параметр `fk_mapping`, необходимый для валидации внешних ключей.
-`fk_mapping` — это словарь, в котором ключи — это названия внешних ключей, а значения — модели SQLAlchemy, на которые эти ключи ссылаются.
-
-```python
-from fastapi_sqlalchemy_toolkit import ModelManager
-
-from .models import MyModel, MyParentModel
-from .schemas import MyModelCreateSchema, MyModelUpdateSchema
-
-my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
-    MyModel, fk_mapping={"parent_id": MyParentModel}
-)
-```
-
 Атрибут `default_ordering` определяет сортировку по умолчанию при получении списка объектов. В него нужно передать поле основной модели.
 
 ```python
