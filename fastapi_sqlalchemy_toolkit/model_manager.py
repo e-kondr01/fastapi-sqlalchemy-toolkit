@@ -132,7 +132,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session.add(db_obj)
         if commit:
             await session.commit()
-        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
+            await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def get(
@@ -532,7 +532,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session.add(db_obj)
         if commit:
             await session.commit()
-        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
+            await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def delete(
@@ -586,8 +586,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session.add_all(objs)
         if commit:
             await session.commit()
-        for db_obj in objs:
-            await session.refresh(db_obj)
+            for db_obj in objs:
+                await session.refresh(db_obj)
         return objs
 
     async def bulk_update(
@@ -630,9 +630,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             session.add(obj)
         if commit:
             await session.commit()
-        updated_objs = list(in_objs.keys())
-        for updated_obj in updated_objs:
-            await session.refresh(updated_obj)
+            updated_objs = list(in_objs.keys())
+            for updated_obj in updated_objs:
+                await session.refresh(updated_obj)
         return updated_objs
 
     ##################################################################################
