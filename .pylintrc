@@ -1,0 +1,5 @@
+[FORMAT]
+max-line-length=88
+
+[MESSAGES CONTROL]
+disable=missing-docstring,too-few-public-methods,no-name-in-module,no-member,too-many-ancestors

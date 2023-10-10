@@ -492,7 +492,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         db_obj: ModelType,
-        in_obj: UpdateSchemaType | ModelDict,
+        in_obj: UpdateSchemaType | ModelDict | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
         **attrs: Any,
@@ -518,7 +518,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :returns: обновлённый экземпляр модели
         """
-        if isinstance(in_obj, dict):
+        if in_obj is None:
+            in_obj = {}
+        elif isinstance(in_obj, dict):
             update_data = in_obj
         else:
             update_data = in_obj.model_dump()
