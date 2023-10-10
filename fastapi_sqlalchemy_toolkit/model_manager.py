@@ -520,7 +520,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         if in_obj is None:
             in_obj = {}
-        elif isinstance(in_obj, dict):
+        if isinstance(in_obj, dict):
             update_data = in_obj
         else:
             update_data = in_obj.model_dump()
