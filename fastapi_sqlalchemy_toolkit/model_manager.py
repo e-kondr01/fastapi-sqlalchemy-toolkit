@@ -845,7 +845,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         for unique_constraint in self.unique_constraints:
             query = {}
             for field in unique_constraint:
-                query[field] = in_obj[field]
+                if in_obj[field] is not None:
+                    query[field] = in_obj[field]
             object_exists = await self.exists(
                 session, **query, id=FieldFilter(in_obj.get("id"), operator="__ne__")
             )
@@ -870,7 +871,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Проверить соблюдение уникальности полей.
         """
         for column in self.model.__table__.columns._all_columns:
-            if column.unique and column.name in in_obj:
+            if column.unique and column.name in in_obj and in_obj[column.name] is not None:
                 if db_obj and getattr(db_obj, column.name) == in_obj[column.name]:
                     continue
                 attrs_to_check = {column.name: in_obj[column.name]}
