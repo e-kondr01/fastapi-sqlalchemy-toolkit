@@ -670,7 +670,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get_joins(
         self,
         base_query: Select,
-        options: List[Any],
+        options: List[Any] | None = None,
         order_by: OrderingField | None = None,
         **kwargs: FieldFilter | Any,
     ) -> Select:
@@ -698,14 +698,15 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     self.models_to_relationship_attrs[model]
                 ).options(contains_eager(self.models_to_relationship_attrs[model]))
 
-        # Если в .options передана стратегия загрузки модели,
-        # которая должна быть подгружена для фильтрации или сортировки,
-        # нужно убрать её из options для избежания конфликтов.
-        options[:] = [
-            option
-            for option in options
-            if option.path.entity.class_ not in models_to_join
-        ]
+        if options:
+            # Если в .options передана стратегия загрузки модели,
+            # которая должна быть подгружена для фильтрации или сортировки,
+            # нужно убрать её из options для избежания конфликтов.
+            options[:] = [
+                option
+                for option in options
+                if option.path.entity.class_ not in models_to_join
+            ]
         return joined_query
 
     def get_order_by_expression(self, order_by: OrderingField | None):
