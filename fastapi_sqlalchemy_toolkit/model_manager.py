@@ -10,7 +10,7 @@ from sqlalchemy.orm import contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, UnaryExpression
 
 from .base_model import Base
 from .filters import FieldFilter, null_query_values
@@ -26,7 +26,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def __init__(
         self,
         model: Type[ModelType],
-        default_ordering: InstrumentedAttribute | None = None,
+        default_ordering: InstrumentedAttribute | UnaryExpression | None = None,
     ) -> None:
         """
         Создание экземпляра ModelManager под конкретную модель.
@@ -124,11 +124,10 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if isinstance(in_obj, dict):
             create_data = in_obj
         else:
-            create_data = in_obj.model_dump()
-        validated_data = await self.run_db_validation(
-            session=session, in_obj=create_data | attrs
-        )
-        db_obj = self.model(**validated_data)
+            create_data = in_obj.model_dump(exclude_unset=True)
+        create_data.update(attrs)
+        await self.run_db_validation(session, in_obj=create_data)
+        db_obj = self.model(**create_data)
         session.add(db_obj)
         if commit:
             await session.commit()
@@ -228,7 +227,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def paginated_filter(
         self,
         session: AsyncSession,
-        pagination_params: AbstractParams | None = None,
+        pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
@@ -289,7 +288,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def paginated_list(
         self,
         session: AsyncSession,
-        pagination_params: AbstractParams | None = None,
+        pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
@@ -523,14 +522,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if isinstance(in_obj, dict):
             update_data = in_obj
         else:
-            update_data = in_obj.model_dump()
+            update_data = in_obj.model_dump(exclude_unset=True)
 
         update_data.update(attrs)
-        validated_data = await self.run_db_validation(
-            session=session, db_obj=db_obj, in_obj=update_data
-        )
-        for field in validated_data:
-            setattr(db_obj, field, validated_data[field])
+        await self.run_db_validation(session=session, db_obj=db_obj, in_obj=update_data)
+        for field in update_data:
+            setattr(db_obj, field, update_data[field])
         session.add(db_obj)
         if commit:
             await session.commit()
@@ -580,7 +577,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         objs = []
         for in_obj in in_objs:
             if not isinstance(in_obj, dict):
-                in_obj = in_obj.model_dump()
+                in_obj = in_obj.model_dump(exclude_unset=True)
             in_obj.update(**attrs)
             await self.run_db_validation(in_obj=in_obj, session=session)
             db_obj = self.model(**in_obj)
@@ -622,13 +619,13 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if isinstance(in_obj, dict):
                 update_data = in_obj
             else:
-                update_data = in_obj.model_dump()
+                update_data = in_obj.model_dump(exclude_unset=True)
             update_data.update(attrs)
-            validated_data = await self.run_db_validation(
+            await self.run_db_validation(
                 session=session, db_obj=obj, in_obj=update_data
             )
-            for field in validated_data:
-                setattr(obj, field, validated_data[field])
+            for field in update_data:
+                setattr(obj, field, update_data[field])
             session.add(obj)
         if commit:
             await session.commit()
@@ -687,8 +684,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             and order_by.field.parent.class_ != self.model
         ):
             models_to_join.add(order_by.field.parent.class_)
-        if self.default_ordering and self.default_ordering.parent.class_ != self.model:
-            models_to_join.add(self.default_ordering.parent.class_)
         for filter in kwargs.values():
             if isinstance(filter, FieldFilter) and filter.model:
                 models_to_join.add(filter.model)
@@ -711,7 +706,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     def get_order_by_expression(self, order_by: OrderingField | None):
         if order_by is not None:
-            if self.default_ordering:
+            if self.default_ordering is not None:
                 return order_by.get_directed_field(self.model), self.default_ordering
             return order_by.get_directed_field(self.model)
         return self.default_ordering
@@ -872,7 +867,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Проверить соблюдение уникальности полей.
         """
         for column in self.model.__table__.columns._all_columns:
-            if column.unique and column.name in in_obj and in_obj[column.name] is not None:
+            if (
+                column.unique
+                and column.name in in_obj
+                and in_obj[column.name] is not None
+            ):
                 if db_obj and getattr(db_obj, column.name) == in_obj[column.name]:
                     continue
                 attrs_to_check = {column.name: in_obj[column.name]}

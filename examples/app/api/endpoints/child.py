@@ -20,17 +20,17 @@ from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
 
 router = APIRouter()
 
-CurrentSession = Annotated[AsyncSession, Depends(get_async_session)]
+Session = Annotated[AsyncSession, Depends(get_async_session)]
 PaginationParams = Annotated[Params, Depends()]
 
 children_ordering_fields = (Parent.created_at, Parent.title, "created_at", "title")
 
 
 @router.get("")
-async def get_children(
-    session: CurrentSession,
+async def get_list(
+    session: Session,
     order_by: ordering_dep(children_ordering_fields),
-    params: PaginationParams,
+    pagination_params: PaginationParams,
     title: str | None = None,
     slug: str | None = None,
     parent_title: str | None = None,
@@ -38,8 +38,8 @@ async def get_children(
 ) -> Page[ChildListSchema]:
     return await child_manager.paginated_list(
         # Обязательные параметры
-        session=session,
-        pagination_params=params,
+        session,
+        pagination_params,
         # Фильтры
         title=FieldFilter(title, operator="ilike"),
         slug=slug,
@@ -53,51 +53,47 @@ async def get_children(
 
 
 @router.get(
-    "/{child_id}",
+    "/{object_id}",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
     },
 )
-async def get_child(
-    child_id: UUID,
-    session: CurrentSession,
+async def retrieve(
+    object_id: UUID,
+    session: Session,
 ) -> ChildDetailSchema:
     return await child_manager.get_or_404(
-        session=session,
-        id=child_id,
+        session,
+        id=object_id,
         options=joinedload(Child.parent),
     )
 
 
 @router.post("")
-async def create_child(
-    child_in: CreateChildSchema, session: CurrentSession
-) -> ChildListSchema:
-    return await child_manager.create(session=session, in_obj=child_in)
+async def create(in_obj: CreateChildSchema, session: Session) -> ChildListSchema:
+    return await child_manager.create(session, in_obj=in_obj)
 
 
 @router.patch(
-    "/{child_id}",
+    "/{object_id}",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
     },
 )
 async def update_child(
-    child_id: UUID, child_in: PatchChildSchema, session: CurrentSession
+    object_id: UUID, in_obj: PatchChildSchema, session: Session
 ) -> ChildListSchema:
-    child_to_update = await child_manager.get_or_404(session=session, id=child_id)
-    return await child_manager.update(
-        session=session, db_obj=child_to_update, in_obj=child_in
-    )
+    db_obj = await child_manager.get_or_404(session, id=object_id)
+    return await child_manager.update(session, db_obj=db_obj, in_obj=in_obj)
 
 
 @router.delete(
-    "/{child_id}",
+    "/{object_id}",
     responses={
         status.HTTP_404_NOT_FOUND: {"model": HTTPErrorSchema},
     },
 )
-async def delete_child(child_id: UUID, session: CurrentSession) -> Response:
-    child_to_delete = await child_manager.get_or_404(session=session, id=child_id)
-    await child_manager.delete(session=session, db_obj=child_to_delete)
+async def delete(object_id: UUID, session: Session) -> Response:
+    db_obj = await child_manager.get_or_404(session=session, id=object_id)
+    await child_manager.delete(session, db_obj=db_obj)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
