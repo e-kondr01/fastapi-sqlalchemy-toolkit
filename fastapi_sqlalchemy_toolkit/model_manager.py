@@ -2,7 +2,7 @@ from typing import Any, Generic, Iterable, List, Type, TypeVar
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import AbstractPage, AbstractParams
-from fastapi_pagination.ext.async_sqlalchemy import paginate
+from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from sqlalchemy import Row, UniqueConstraint, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
