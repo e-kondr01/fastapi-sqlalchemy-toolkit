@@ -124,7 +124,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if isinstance(in_obj, dict):
             create_data = in_obj
         else:
-            create_data = in_obj.model_dump(exclude_unset=True)
+            create_data = in_obj.model_dump()
         create_data.update(attrs)
         await self.run_db_validation(session, in_obj=create_data)
         db_obj = self.model(**create_data)
@@ -494,6 +494,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         in_obj: UpdateSchemaType | ModelDict | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
+        exclude_unset: bool = True,
         **attrs: Any,
     ) -> ModelType:
         """
@@ -515,6 +516,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param commit: нужно ли вызывать `session.commit()`
 
+        :param exclude_unset: передаётся в метод `.model_dump()` Pydantic модели.
+        При использовании метода в PATCH-запросах имеет смысл оставлять его True
+        для изменения только переданных полей; при PUT-запросах имеет смысл
+        передавать False, чтобы установить дефолтные значения полей, заданные
+        в модели Pydantic.
+
         :returns: обновлённый экземпляр модели
         """
         if in_obj is None:
@@ -522,7 +529,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if isinstance(in_obj, dict):
             update_data = in_obj
         else:
-            update_data = in_obj.model_dump(exclude_unset=True)
+            update_data = in_obj.model_dump(exclude_unset=exclude_unset)
 
         update_data.update(attrs)
         await self.run_db_validation(session=session, db_obj=db_obj, in_obj=update_data)
@@ -577,7 +584,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         objs = []
         for in_obj in in_objs:
             if not isinstance(in_obj, dict):
-                in_obj = in_obj.model_dump(exclude_unset=True)
+                in_obj = in_obj.model_dump()
             in_obj.update(**attrs)
             await self.run_db_validation(in_obj=in_obj, session=session)
             db_obj = self.model(**in_obj)
@@ -594,6 +601,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         in_objs: dict[ModelType, UpdateSchemaType],
         commit: bool = True,
+        exclude_unset: bool = True,
         **attrs: Any,
     ) -> List[ModelType]:
         """
@@ -609,6 +617,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param commit: нужно ли вызывать `session.commit()`
 
+        :param exclude_unset: передаётся в метод `.model_dump()` Pydantic модели.
+        При использовании метода в PATCH-запросах имеет смысл оставлять его True
+        для изменения только переданных полей; при PUT-запросах имеет смысл
+        передавать False, чтобы установить дефолтные значения полей, заданные
+        в модели Pydantic.
+
         :param attrs: дополнительные значения обновляемых полей
         (чтобы какие-то поля можно было установить напрямую из кода,
         например, пользователя запроса)
@@ -619,7 +633,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if isinstance(in_obj, dict):
                 update_data = in_obj
             else:
-                update_data = in_obj.model_dump(exclude_unset=True)
+                update_data = in_obj.model_dump(exclude_unset=exclude_unset)
             update_data.update(attrs)
             await self.run_db_validation(
                 session=session, db_obj=obj, in_obj=update_data
