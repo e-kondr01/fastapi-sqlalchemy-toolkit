@@ -1,4 +1,4 @@
-from typing import Any, Generic, Iterable, List, Type, TypeVar
+from typing import Any, Callable, Generic, Iterable, List, Type, TypeVar
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import AbstractPage, AbstractParams
@@ -10,10 +10,15 @@ from sqlalchemy.orm import contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, UnaryExpression
+from sqlalchemy.sql.elements import (
+    BinaryExpression,
+    BooleanClauseList,
+    Null,
+    UnaryExpression,
+)
 
 from .base_model import Base
-from .filters import FieldFilter, null_query_values
+from .filters import null_query_values
 from .ordering import OrderingField
 
 ModelType = TypeVar("ModelType", bound=Base)
@@ -140,8 +145,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         options: List[Any] | Any | None = None,
         order_by: OrderingField | None = None,
+        where: Any | None = None,
         select_: Select | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ) -> ModelType | Row | None:
         """
         Получение одного экземпляра модели при существовании
@@ -159,31 +165,26 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
 
         :returns: экземпляр модели, Row или None, если подходящего нет в БД
         """
-        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
-        filter_expression = self.get_filter_expression(**attrs)
-        statement = statement.filter(filter_expression)
-        if options is not None:
-            if not isinstance(options, list):
-                options = [options]
-        else:
-            options = []
-        statement = self.get_joins(statement, options, order_by=order_by, **attrs)
-        for option in options:
-            statement = statement.options(option)
-        order_by_expression = self.get_order_by_expression(order_by)
-        if order_by_expression is not None:
-            statement = statement.order_by(order_by_expression)
-        result = await session.execute(statement=statement)
+        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
 
+        result = await session.execute(stmt)
         if select_ is None:
             return result.scalars().first()
         return result.first()
 
-    async def get_or_404(self, session: AsyncSession, **attrs: Any) -> ModelType | Row:
+    async def get_or_404(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = None,
+        order_by: OrderingField | None = None,
+        where: Any | None = None,
+        select_: Select | None = None,
+        **simple_filters: Any,
+    ) -> ModelType | Row:
         """
         Получение одного экземпляра модели или возвращение HTTP ответа 404.
 
@@ -196,8 +197,17 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :raises: fastapi.HTTPException 404
         """
 
-        db_obj = await self.get(session=session, **attrs)
-        attrs_str = ", ".join([f"{key}={value}" for key, value in attrs.items()])
+        db_obj = await self.get(
+            session,
+            options=options,
+            order_by=order_by,
+            where=where,
+            select_=select_,
+            **simple_filters,
+        )
+        attrs_str = ", ".join(
+            [f"{key}={value}" for key, value in simple_filters.items()]
+        )
         if not db_obj:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -205,7 +215,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
         return db_obj
 
-    async def exists(self, session: AsyncSession, **attrs: FieldFilter | Any) -> bool:
+    async def exists(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = None,
+        order_by: OrderingField | None = None,
+        where: Any | None = None,
+        **simple_filters: Any,
+    ) -> bool:
         """
         Проверка существования экземпляра модели.
 
@@ -213,14 +230,15 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
 
         :returns: True если объект существует, иначе False
         """
-        filter_expression = self.get_filter_expression(**attrs)
-        statement = select(self.model.id).filter(filter_expression)
-        statement = self.get_joins(statement, **attrs)
-        result = await session.execute(statement=statement)
+        stmt = self.assemble_stmt(
+            select(self.model.id), order_by, options, where, **simple_filters
+        )
+
+        result = await session.execute(stmt)
         return result.first() is not None
 
     async def paginated_filter(
@@ -231,7 +249,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ) -> AbstractPage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
@@ -258,41 +276,25 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
         Если значение параметра None, то параметр игнорируется.
 
         :returns: пагинированный список объектов или Row
         """
-        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
-        if options is not None:
-            if not isinstance(options, list):
-                options = [options]
-        else:
-            options = []
-        joined_query = self.get_joins(
-            statement,
-            options,
-            order_by=order_by,
-            **attrs,
-        )
-        query = self.get_list_query(
-            joined_query,
-            order_by=order_by,
-            options=options,
-            where=where,
-            **attrs,
-        )
-        return await paginate(session, query, pagination_params)
+        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        return await paginate(session, stmt, pagination_params)
 
     async def paginated_list(
         self,
         session: AsyncSession,
         pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
+        # TODO: typehint method?
+        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ) -> AbstractPage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
@@ -319,32 +321,35 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
         Если значение параметра None, то параметр игнорируется.
 
         :returns: пагинированный список объектов или Row
         """
-        attrs = self.handle_optional_filters(**attrs)
-        return await self.paginated_filter(
-            session,
-            pagination_params=pagination_params,
-            order_by=order_by,
-            options=options,
-            where=where,
-            select_=select_,
-            **attrs,
+        self.remove_optional_filter_bys(**simple_filters)
+        self.remove_optional_binary_expressions(list_filters)
+        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.get_joins(
+            stmt, options=options, order_by=order_by, list_filters=list_filters
         )
+
+        for list_filter, value in list_filters.items():
+            if isinstance(list_filter, InstrumentedAttribute):
+                stmt = stmt.filter(list_filter == value)
+            else:
+                stmt = stmt.filter(list_filter(value))
+
+        return await paginate(session, stmt, pagination_params)
 
     async def filter(
         self,
         session: AsyncSession,
         order_by: OrderingField | None = None,
-        filter_by: dict | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
         select_: Select | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ) -> List[ModelType] | List[Row]:
         """
         Получение списка объектов с фильтрами.
@@ -355,9 +360,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
-        :param filter_by: параметры для метода .filter_by() селекта SQLAlchemy
-        в виде словаря
-
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
         :param where: параметры для метода .where() селекта SQLAlchemy.
@@ -375,49 +377,30 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
         Если значение параметра None, то параметр игнорируется.
 
         :returns: список объектов или Row
         """
-        statement = self.get_select(select_=select_, order_by=order_by, **attrs)
-        if options is not None:
-            if not isinstance(options, list):
-                options = [options]
-        else:
-            options = []
-        joined_query = self.get_joins(
-            statement,
-            options,
-            order_by=order_by,
-            **attrs,
-        )
-        query = self.get_list_query(
-            joined_query,
-            order_by,
-            filter_by,
-            options,
-            where=where,
-            **attrs,
-        )
-        list_objects = await session.execute(query)
+        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        result = await session.execute(stmt)
 
         if select_ is None:
             if unique:
-                return list_objects.scalars().unique().all()
-            return list_objects.scalars().all()
-        return list_objects.all()
+                return result.scalars().unique().all()
+            return result.scalars().all()
+        return result.all()
 
     async def list(
         self,
         session: AsyncSession,
         order_by: OrderingField | None = None,
-        filter_by: dict | None = None,
+        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
         select_: Select | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ) -> List[ModelType] | List[Row]:
         """
         Получение списка объектов с фильтрами.
@@ -428,9 +411,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
-        :param filter_by: параметры для метода .filter_by() селекта SQLAlchemy
-        в виде словаря
-
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
         :param where: параметры для метода .where() селекта SQLAlchemy.
@@ -448,24 +428,40 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
         Если значение параметра None, то параметр игнорируется.
 
         :returns: список объектов или Row
         """
-        attrs = self.handle_optional_filters(**attrs)
-        return await self.filter(
-            session,
-            order_by=order_by,
-            filter_by=filter_by,
-            options=options,
-            where=where,
-            unique=unique,
-            select_=select_,
-            attrs=attrs,
+        self.remove_optional_filter_bys(**simple_filters)
+        self.remove_optional_binary_expressions(list_filters)
+        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.get_joins(
+            stmt, options=options, order_by=order_by, list_filters=list_filters
         )
 
-    async def count(self, session: AsyncSession, **attrs: FieldFilter | Any) -> int:
+        for list_filter, value in list_filters.items():
+            if isinstance(list_filter, InstrumentedAttribute):
+                stmt = stmt.filter(list_filter == value)
+            else:
+                stmt = stmt.filter(list_filter(value))
+
+        result = await session.execute(stmt)
+
+        if select_ is None:
+            if unique:
+                return result.scalars().unique().all()
+            return result.scalars().all()
+        return result.all()
+
+    async def count(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = None,
+        order_by: OrderingField | None = None,
+        where: Any | None = None,
+        **simple_filters: Any,
+    ) -> int:
         """
         Возвращает количество экземпляров модели по данным фильтрам.
 
@@ -473,18 +469,19 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param attrs: параметры для выборки объекта. Название параметра используется как
         название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения либо экземпляром FieldFilter.
+        точного сравнения
 
         :returns: количество объектов по переданным фильтрам
         """
-        attrs = self.handle_optional_filters(**attrs)
-        query = select(func.count(self.model.id))
-        filter_expression = self.get_filter_expression(**attrs)
-        if filter_expression is not None:
-            query = query.filter(filter_expression)
-        query = self.get_joins(query, **attrs)
-        amount = await session.execute(query)
-        return amount.scalars().first() or 0
+        stmt = self.assemble_stmt(
+            select(func.count(self.model.id)),
+            order_by,
+            options,
+            where,
+            **simple_filters,
+        )
+        result = await session.execute(stmt)
+        return result.scalars().first() or 0
 
     async def update(
         self,
@@ -678,7 +675,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         base_query: Select,
         options: List[Any] | None = None,
         order_by: OrderingField | None = None,
-        **kwargs: FieldFilter | Any,
+        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
     ) -> Select:
         """
         Делает необходимые join'ы при фильтрации и сортировке по полям
@@ -693,9 +690,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             and order_by.field.parent.class_ != self.model
         ):
             models_to_join.add(order_by.field.parent.class_)
-        for field_filter in kwargs.values():
-            if isinstance(field_filter, FieldFilter) and field_filter.model:
-                models_to_join.add(field_filter.model)
+        if list_filters:
+            for list_filter in list_filters.keys():
+                if isinstance(list_filter, InstrumentedAttribute):
+                    model = list_filter.parent
+                else:
+                    model = list_filter.__self__.parent
+                if model != self.model:
+                    models_to_join.add(model)
         for model in models_to_join:
             if model in self.models_to_relationship_attrs:
                 joined_query = joined_query.outerjoin(
@@ -721,100 +723,75 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return self.default_ordering
 
     @staticmethod
-    def handle_optional_filters(
-        **filters: FieldFilter | Any,
-    ) -> dict[str, FieldFilter | Any]:
-        """
-        Обработка параметров фильтрации для методов `list` и `paginated_list`.
-        Исключает параметры фильтрации со значением None.
-        Добавляет фильтрацию по None для параметров со значением из
-        `null_query_values` и установленным `nullable_q=True`.
-        """
-        result_filters = {}
-        for name, field_filter in filters.items():
-            if (
-                isinstance(field_filter, FieldFilter)
-                and field_filter.nullable_q
-                and field_filter.value in null_query_values
-            ):
-                field_filter.value = None
-                result_filters[name] = field_filter
-            if field_filter != None:
-                result_filters[name] = field_filter
-        return result_filters
+    def remove_optional_filter_bys(
+        **filters: Any,
+    ) -> None:
+        for filter_by_name, filter_by_value in filters.copy().items():
+            if filter_by_value is None:
+                del filters[filter_by_name]
 
-    def add_reverse_relation_filter_expression(
-        self, field_name: str, filter_options, filters: List
+    @staticmethod
+    def remove_optional_binary_expressions(
+        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
+    ) -> None:
+        if list_filters:
+            for list_filter, value in list_filters.copy().items():
+                if value is None:
+                    del list_filters[list_filter]
+
+    def get_reverse_relation_filter_stmt(
+        self,
+        field_name: str,
+        value: Any,
     ):
         relationship = getattr(self.model, field_name)
-        filter_expression = relationship.any(
-            self.reverse_relationships[field_name].id.in_(filter_options)
-        )
-        filters.append(filter_expression)
+        # TODO: type?
+        return relationship.any(self.reverse_relationships[field_name].id.in_(value))
 
-    def get_filter_expression(
-        self, **kwargs: FieldFilter | Any
-    ) -> BooleanClauseList | None:
-        filters: List[BinaryExpression] = []
-        for field_name, filter_options in kwargs.items():
-            if field_name in self.reverse_relationships:
-                self.add_reverse_relation_filter_expression(
-                    field_name, filter_options, filters
-                )
-                continue
-
-            if not isinstance(filter_options, FieldFilter):
-                filter_options = FieldFilter(filter_options)
-
-            model = filter_options.model or self.model
-            field = (
-                getattr(model, filter_options.alias)
-                if filter_options.alias
-                else getattr(model, field_name)
-            )
-            expression = field
-            if filter_options.func:
-                expression = filter_options.func(expression)
-            operators = filter_options.operator.split(".")
-            for operator in operators:
-                expression = getattr(expression, operator)
-            filters.append(expression(filter_options.value))
-
-        if filters:
-            expression = filters[0]
-            for filter_expression in filters[1:]:
-                expression &= filter_expression
-        else:
-            expression = None
-        return expression
-
-    def get_list_query(
+    def assemble_stmt(
         self,
-        base_query: Select,
-        order_by: OrderingField | None,
-        options: List[Any],
-        filter_by: dict | None = None,
+        select_: Select | None = None,
+        order_by: OrderingField | None = None,
+        options: List[Any] | Any | None = None,
         where: Any | None = None,
-        **attrs: FieldFilter | Any,
+        **simple_filters: Any,
     ):
-        query = base_query
+        # TODO: return type
+        if select_:
+            stmt = select_
+        else:
+            stmt = self.get_select(select_=select_, order_by=order_by, **simple_filters)
+
+        for field_name, value in simple_filters.copy().items():
+            if field_name in self.reverse_relationships:
+                stmt = stmt.filter(
+                    self.get_reverse_relation_filter_stmt(field_name, value)
+                )
+                del simple_filters[field_name]
+
+        if simple_filters:
+            stmt = stmt.filter_by(**simple_filters)
+
         order_by_expression = self.get_order_by_expression(order_by)
-        filter_expression = self.get_filter_expression(**attrs)
-        if filter_expression is not None:
-            query = query.filter(filter_expression)
-        if filter_by is not None:
-            query = query.filter_by(**filter_by)
         if order_by_expression is not None:
-            query = (
-                query.order_by(*order_by_expression)
+            stmt = (
+                stmt.order_by(*order_by_expression)
                 if isinstance(order_by_expression, tuple)
-                else query.order_by(order_by_expression)
+                else stmt.order_by(order_by_expression)
             )
+
+        if options is not None:
+            if not isinstance(options, list):
+                options = [options]
+        else:
+            options = []
         for option in options:
-            query = query.options(option)
+            stmt = stmt.options(option)
+
         if where is not None:
-            query = query.where(where)
-        return query
+            stmt = stmt.where(where)
+
+        return stmt
 
     async def validate_fk_exists(
         self, session: AsyncSession, in_obj: ModelDict
@@ -851,7 +828,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 if in_obj[field] is not None:
                     query[field] = in_obj[field]
             object_exists = await self.exists(
-                session, **query, id=FieldFilter(in_obj.get("id"), operator="__ne__")
+                session, **query, where=(self.model.id != in_obj.get("id"))
             )
             if object_exists:
                 conflicting_fields = ", ".join(unique_constraint)
@@ -885,7 +862,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 object_exists = await self.exists(
                     session=session,
                     **attrs_to_check,
-                    id=FieldFilter(in_obj.get("id"), operator="__ne__"),
+                    where=(self.model.id != in_obj.get("id")),
                 )
                 if object_exists:
                     raise HTTPException(
