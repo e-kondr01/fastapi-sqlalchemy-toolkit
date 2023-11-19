@@ -803,7 +803,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         **simple_filters: Any,
     ) -> Select:
-        if select_:
+        if select_ is not None:
             stmt = select_
         else:
             stmt = self.get_select(select_=select_, order_by=order_by, **simple_filters)
