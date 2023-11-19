@@ -722,11 +722,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         for filter_expression in filter_expressions.keys():
             if isinstance(filter_expression, InstrumentedAttribute):
-                model = filter_expression.parent
+                model = filter_expression.parent._identity_class
             elif isinstance(filter_expression, Function):
                 model = filter_expression.entity_namespace
             else:
-                model = filter_expression.__self__.parent
+                model = filter_expression.__self__.parent._identity_class
             if model != self.model:
                 models_to_join.add(model)
         for model in models_to_join:

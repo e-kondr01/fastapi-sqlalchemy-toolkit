@@ -6,15 +6,19 @@
 - cнижение количества шаблонного, копипастного кода, который возникает при разработке
 REST API и взаимодействии с СУБД через `SQLAlchemy`;
 
-- валидация значений на уровне БД.
+- автоматическая валидация значений на уровне БД при создании и изменении объектов через API.
+
+Для этого `FastAPI SQLAlachemy Toolkit` предоставляет класс менеджера `fastapi_sqlalchemy_toolkit.ModelManager` 
+для взаимодействия с моделью.
 
 ## Features
 
-- Декларативная фильтрация с помощью `FieldFilter`, в том числе по полям связанных моделей (см. раздел **Фильтрация**)
+- Методы для CRUD-операций с объектами в БД
+
+- Фильтрация с обработкой необязательных параметров запроса, фильтрация по полям связанных моделей
+с автоматическими необходимыми `join`ами (см. раздел **Фильтрация**)
 
 - Декларативная сортировка с помощью `ordering_dep`, в том числе по полям связанных моделей (см. раздел **Сортировка**)
-
-- Методы для CRUD-операций с объектами в БД
 
 - Валидация существования внешних ключей
 
@@ -58,7 +62,7 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 )
 ```
 
-## Доступные методы `ModelManager`
+## Методы `ModelManager`
 
 Ниже перечислены CRUD методы, предоставляемые `ModelManager`.
 Документация параметров, принимаемых методами, находится в докстрингах методов.
@@ -67,8 +71,8 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 - `get` - получение объекта
 - `get_or_404` - получение объекта или ошибки HTTP 404
 - `exists` - проверка существования объекта
-- `paginated_list` - получение списка объектов с фильтрами и пагинацией через `fastapi_pagination`
-- `list` - получение списка объектов с фильтрами
+- `paginated_list` / `paginated_filter` - получение списка объектов с фильтрами и пагинацией через `fastapi_pagination`
+- `list` / `filter` - получение списка объектов с фильтрами
 - `count` - получение количества объектов
 - `update` - обновление объекта; выполняет валидацию значений полей на уровне БД
 - `delete` - удаление объекта
@@ -76,7 +80,262 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 - `bulk_update` - обновление объектов пачкой; выполняет валидацию значений полей на уровне БД
 
 ## Фильтрация
+
+Для получения списка объектов с фильтрацией `fastapi_sqlalchemy_toolkit` предоставляет два метода:
+`list`, который имеет дополнительную предобработку значений, и `filter`, который не производит скрытых обработк.
+Аналогично ведут себя методы `paginated_list` и `paginated_filter`, за исключением того, что они пагинирует результат
+с помощью `fastapi_pagination`.
+
+Пусть у нас есть следующие модели:
+
+```python
+class Base(DeclarativeBase):
+    id: Mapped[_py_uuid] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Parent(Base):
+    title: Mapped[str]
+    slug: Mapped[str] = mapped_column(unique=True)
+    children: Mapped[list["Child"]] = relationship(back_populates="parent")
+
+
+class Child(Base):
+    title: Mapped[str]
+    slug: Mapped[str] = mapped_column(unique=True)
+    parent_id: Mapped[UUID] = mapped_column(ForeignKey("parent.id", ondelete="CASCADE"))
+    parent: Mapped[Parent] = relationship(back_populates="children")
+```
+
+И менеджер:
+
+```python
+from fastapi_sqlalchemy_toolkit import ModelManager
+
+child_manager = ModelManager[Child, CreateChildSchema, PatchChildSchema](
+    Child, default_ordering=Child.title
+)
+```
+
+### Простая фильтрация по точному соответствию через API
+
+```python
+@router.get("/children")
+async def get_list(
+    session: Session,
+    slug: str | None = None,
+) -> list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        slug=slug,
+    )
+```
+
+Запрос `GET /children` сгенерирует следующий SQL код:
+
+```SQL
+SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child
+```
+
+Запрос `GET /children?slug=child-1` сгенерирует следующий SQL код:
+
+```SQL
+SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE child.slug = :slug_1
+```
+
+По конвенции FastAPI, необязательные параметры запроса типизируются подобно `slug: str | None = None`.
+При этом ожидается, что при запросе `GET /children` будут возвращены все объекты `Child`, а не только те,
+у которых `slug is null`. Поэтому метод `list` (`paginated_list`) отбрасывает фильтрацию по этому параметру,
+если он не передан 
+(*читайте раздел "Фильтрация без дополнительной обработки" для того, чтобы узнать, как избежать такого поведения*).
+
+### Более сложная фильтрация
+
+Чтобы использовать фильтрацию не только по точному соответствию с атрибутом модели,
+в методах `list` и `paginated_list` можно использовать параметр `filter_expressions`.
+
+Параметр `filter_expressions` принимает словарь, в котором ключи -- это:
+
+1. Атрибуты основной модели (`Child.title`) или связанной модели (`Parent.title`)
+
+2. Операторы атрибутов модели (`Child.title.ilike`)
+
+3. Функции `sqlalchemy` над атрибутами модели (`func.date(Child.created_at)`)
+
+Значение по ключу -- это значение, по которому должна осуществляться фильтрация.
+
+Пример фильтрации по **оператору** атрибута модели:
+
+```python
+@router.get("/children")
+async def get_list(
+    session: Session,
+    title: str | None = None,
+) -> list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Child.title.ilike: title
+        },
+    )
+```
+
+Запрос `GET /children` сгенерирует следующий SQL код:
+
+```SQL
+SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child
+```
+
+Запрос `GET /children?title=ch` сгенерирует следующий SQL код:
+
+```SQL
+SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE lower(child.title) LIKE lower(:title_1)
+```
+
+Пример фильтрации по атрибуту **связанной** модели:
+
+```python
+@router.get("/children")
+async def get_list(
+    session: Session,
+    parent_title: str | None = None,
+) -> list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Parent.title.ilike: title
+        },
+    )
+```
+
+Запрос `GET /children?parent_title=ch` сгенерирует следующий SQL код:
+
+```SQL
+SELECT parent.title, parent.slug, parent.id, parent.created_at, 
+child.title AS title_1, child.slug AS slug_1, child.parent_id, child.id AS id_1, child.created_at AS created_at_1 
+FROM child LEFT OUTER JOIN parent ON parent.id = child.parent_id 
+WHERE lower(parent.title) LIKE lower(:title_1)
+```
+
+При фильтрации по полям связанных моделей через параметр `filter_expression` необходимые для фильтрации
+`join` будут сделаны автоматически.
+
+Пример фильтрации по **функции `sqlalchemy`** над атрибутом модели:
+
+```python
+@router.get("/children")
+async def get_list(
+    session: Session,
+    created_at_date: date | None = None,
+) -> list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            func.date(Child.created_at): created_at_date
+        },
+    )
+```
+
+Запрос `GET /children?created_at_date=2023-11-19` сгенерирует следующий SQL код:
+
+```SQL
+SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE date(child.created_at) = :date_1
+```
+
+### Фильтрация без дополнительной обработки
+
+Для фильтрации без дополнительной обработки в методах `list` и `paginated_list` можно
+использовать параметр `where`. Переданное в этот параметр значение будет напрямую
+передано в метод `.where()` экземпляра `Select` в выражении запроса `SQLAlchemy`.
+
+```python
+    non_archived_items = await item_manager.list(session, where=(Item.archived_at == None))
+```
+
+Использовать параметр `where` методов `list` и `paginated_list` имеет смысл тогда,
+когда эти методы используются в списочном API эндпоинте и предобработка каких-то параметров
+запроса полезна, однако нужно также добавить фильтр без предобработок от `fastapi_sqlalchemy_toolkit`.
+
+В том случае, когда предобработки `fastapi_sqlalchemy_toolkit` не нужны вообще, стоит использовать методы
+`filter` и `paginated_filter`:
+
+```python
+    created_at = None
+
+    items = await item_manager.filter(session, created_at=created_at)
+```
+
+```SQL
+SELECT item.id, item.name, item.created_at
+FROM item
+WHERE itme.created is null
+```
+
+Конкретно, в отличие от метода `list`, метод `filter`:
+
+1. Не игнорирует простые фильтры (kwargs) со значением None
+
+2. Не имеет параметра `filter_expressions`, т. е. не будет выполнять `join`, необходимые для фильтрации
+по полям связанных моделей.
+
+### Фильтрация по `null` через API
+
+Если в списочном эндпоинет API требуется, чтобы можно было как отфильтровать значение поля
+по переданному значению, так и отфильтровать его по `null`, предлагается использовать параметр
+`nullable_filter_expressions` методов `list` (`paginated_list`):
+
+```python
+from datetime import datetime
+
+from fastapi_sqlalchemy_toolkit import NullableQuery
+
+from app.managers import my_object_manager
+from app.models import MyObject
+
+@router.get("/my-objects")
+async def get_my_objects(
+    session: Session,
+    deleted_at: datetime | NullableQuery | None = None
+) -> list[MyObjectListSchema]:
+    return await my_object_manager.list(
+        session,
+        nullable_filter_expressions={
+            MyObject.deleted_at: deleted_at
+        }
+    )
+```
+
+Параметру с поддержкой фильтрации по null нужно указать возможный тип
+`fastapi_sqlalchemy_toolkit.NullableQuery`.
+
+Теперь при запросе `GET /my-objects?deleted_at=` или `GET /my-objects?deleted_at=null`
+вернутся объекты `MyObject`, у которых `deleted_at IS NULL`.
+
+### Фильтрация по обратным связям
+Также в методах получения списков есть поддержка фильтрации
+по обратным связям (`relationship()` в направлении один ко многим) с использованием метода `.any()`.
+
+```python
+# Если ParentModel.children -- это связь один ко многим
+await parent_manager.list(session, children=[1, 2])
+# Вернёт объекты Parent, у которых есть связь с ChildModel с id 1 или 2
+```
+
 ### Предпосылки
+Необязательный раздел с демо сокращения количества шаблонного кода при использовании `fastapi_sqlalchemy_toolkit`.
+
 Если в эндпоинт `FastAPI` нужно добавить фильтры по значениям полей, то код будет выглядеть примерно так:
 
 ```python
@@ -92,24 +351,24 @@ from app.models import MyModel, MyParentModel
 from app.schemas import MyObjectListSchema
 
 router = APIRouter()
-CurrentSession = Annotated[AsyncSession, Depends(get_async_session)]
+Session = Annotated[AsyncSession, Depends(get_async_session)]
 
 
 @router.get("/my-objects")
 async def get_my_objects(
-    session: CurrentSession,
+    session: Session,
     user_id: UUID | None = None,
     name: str | None = None,
     parent_name: str | None = None,
 ) -> list[MyObjectListSchema]:
     stmt = select(MyModel)
     if user_id is not None:
-        stmt = stmt.filter_by(user_id=user_id)
+        stmt = stmt.filter_by(user_id=f"%{user_id}%")
     if name is not None:
         stmt = stmt.filter(MyModel.name.ilike == name)
     if parent_name is not None:
         stmt = stmt.join(MyModel.parent)
-        stmt = stmt.filter(ParentModel.name.ilike == parent_name)
+        stmt = stmt.filter(ParentModel.name.ilike == f"%{parent_name}%")
     result = await session.execute(stmt)
     return result.scalars().all()
 ```
@@ -124,7 +383,7 @@ from app.managers import my_object_manager
 
 @router.get("/my-objects")
 async def get_my_objects(
-    session: CurrentSession,
+    session: Session,
     user_id: UUID | None = None,
     name: str | None = None,
     parent_name: str | None = None,
@@ -132,137 +391,11 @@ async def get_my_objects(
     return await my_object_manager.list(
         session,
         user_id=user_id,
-        name=FieldFilter(name, operator="ilike"),
-        parent_name=FieldFilter(parent_name, operator="ilike", model=ParentModel, alias="name"),
+        filter_expressions={
+            MyObject.name: name,
+            MyObjectParent.name: parent_name
+        }
     )
-```
-### Использование FieldFilter
-Дополнительные возможности декларативной фильтрации поддерживаются использованием класса `FieldFilter`.
-`FieldFilter` позволяет:
-- фильтровать по значениям полей связанных моделей при установке атрибута `model`. 
-При этом `ModelManager` автоматически сделает необходимые join'ы, если это модель, которая напрямую связана с главной
-- использовать любые методы и атрибуты полей SQLAlchemy через атрибут `operator`
-- применять функции SQLAlchemy к полям (например, `date()`) через атрибут `func`
-
-```python
-from app.managers import parent_manager
-from app.models import Child
-
-from fastapi_sqlalchemy_toolkit import FieldFilter
-
-await parent_manager.list(
-    session, title=FieldFilter(child_title, model=Child, operator="ilike")
-)
-```
-
-### Фильтрация по `null` и необязательные квери параметры
-
-Для получения списка объектов в `fastapi-sqlalchemy-toolkit` могут
-использоваться два метода: `list` и `filter`. Их отличие в том, что
-`list` **игнорирует** параметры фильтрации со значением `None`,
-в то время как `filter` **применяет** параметры фильтрации 
-со значением `None` как SQL фильтр по `NULL`.
-
-
-Таким образом, метод `list` подходит для использования в **API эндпоинтах**,
-где зачастую нужны необязательные квери параметры. Метод `filter`
-подходит для использования в качестве аналогичного метода **ORM** SQLAlchemy
-(в методах менеджеров и т. п.).
-
-
-Аналогичным образом работают методы `paginated_list` и `paginated_filter`.
-
-*Примечание:* метода `list` был добавлен, чтобы сохранить конвенции FastAPI,
-когда необязательные квери параметры объявляются как `q: type_ | None = None`.
-При этом ожидается, что при отсутствии параметра фильтр не будет применён.
-
-**Примеры**:
-
-1. Эндпоинт с необязательными квери параметрами:
-```python
-from fastapi_sqlalchemy_toolkit import FieldFilter
-
-from app.managers import my_object_manager
-
-@router.get("/my-objects")
-async def get_my_objects(
-    session: CurrentSession,
-    user_id: UUID | None = None,
-    title: str | None = None
-) -> list[MyObjectListSchema]:
-    return await my_object_manager.list(
-        session,
-        user_id=user_id,
-        title=FieldFilter(title, operator="icontains")
-    )
-```
-
-Использование метода `list` обеспечивает, что при запросе `GET /my-objects`
-без квери параметров вернутся все объекты `MyObject`, т. е. фильтры
-по `user_id` и `title` не будет применён.
-
-Аналогично работает с методом `paginated_list`.
-
-
-2. Фильтрация по `null` при использовании `ModelManager` как ORM:
-
-```python
-    async def my_manager_method(self, session):
-        not_deleted_objects = await my_object_manager.filter(
-            session,
-            deleted_at=None,
-        )
-
-        ...
-```
-
-Использование метода `filter` обеспечивает, что 
-`note_deleted_objects` содержит те объекты, у которых `"deleted_at" IS NULL`.
-
-Аналогично работает с методом `paginated_filter`.
-
-3. Эндпоинт с возможностью фильтрации по `null` через квери параметры:
-
-```python
-from datetime import datetime
-
-from fastapi_sqlalchemy_toolkit import FieldFilter, NullableQuery
-
-from app.managers import my_object_manager
-
-@router.get("/my-objects")
-async def get_my_objects(
-    session: CurrentSession,
-    user_id: UUID | None = None,
-    deleted_at: datetime | NullableQuery | None = None
-) -> list[MyObjectListSchema]:
-    return await my_object_manager.list(
-        session,
-        user_id=user_id,
-        deleted_at=FieldFilter(deleted_at, nullable_q=True)
-    )
-```
-
-Если требуется фильтрация значения поля по `null` через квери параметр,
-то необходимо указать допустимый тип соответствующего аргумента как `fastapi_sqlalchemy_toolkit.NullableQuery`
-и передать его в метод фильтрации с помощью `FieldFilter` с указанным параметрам `nullable_q=True`.
-
-`NullableQuery` -- это пустая строка `""` или строка `"null"`
-
-
-Теперь при запросе `GET /my-objects?deleted_at=` или `GET /my-objects?deleted_at=null`
-вернутся объекты `MyObject`, у которых `"deleted_at" IS NULL`.
-
-Аналогично работает с методом `paginated_list`.
-
-### Фильтрация по обратным связям
-Также в методах получения списков есть поддержка фильтрации
-по обратным связям (`relationship()` в направлении один ко многим) с использованием метода `.any()`.
-
-```python
-# Если ParentModel.children -- это связь один ко многим
-await parent_manager.list(session, children=[1, 2])
-# Вернёт объекты Parent, у которых есть связь с ChildModel с id 1 или 2
 ```
 
 ## Сортировка
@@ -301,7 +434,7 @@ from fastapi_sqlalchemy_toolkit import ordering_dep
 
 @router.get("/children")
 async def get_child_objects(
-    session: CurrentSession,
+    session: Session,
     order_by: ordering_dep(child_ordering_fields)
 ) -> list[ChildListSchema]
     ...
@@ -409,7 +542,7 @@ class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
 ```python
 @router.post("")
 async def create_child(
-    child_in: CreateUpdateChildSchema, session: CurrentSession, user: CurrentUser
+    child_in: CreateUpdateChildSchema, session: Session, user: CurrentUser
 ) -> CreateUpdateChildSchema:
     return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
 ```
@@ -445,7 +578,7 @@ from fastapi_sqlalchemy_toolkit.utils import comma_list_query, get_comma_list_va
 
 @router.get("/children")
 async def get_child_objects(
-    session: CurrentSession,
+    session: Session,
     ids: comma_list_query = None,
 ) -> list[ChildListSchema]
     ids = get_comma_list_values(ids, UUID)
