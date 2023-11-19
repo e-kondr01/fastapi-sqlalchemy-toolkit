@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 from uuid import UUID
 
@@ -13,10 +14,11 @@ from app.schemas import (
 )
 from fastapi import APIRouter, Depends, Response, status
 from fastapi_pagination import Page, Params
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from fastapi_sqlalchemy_toolkit import FieldFilter, ordering_dep
+from fastapi_sqlalchemy_toolkit import ordering_dep
 
 router = APIRouter()
 
@@ -35,18 +37,20 @@ async def get_list(
     slug: str | None = None,
     parent_title: str | None = None,
     parent_slug: str | None = None,
+    created_at_date: date | None = None,
 ) -> Page[ChildListSchema]:
     return await child_manager.paginated_list(
         # Обязательные параметры
         session,
         pagination_params,
         # Фильтры
-        title=FieldFilter(title, operator="ilike"),
         slug=slug,
-        parent_title=FieldFilter(
-            parent_title, operator="ilike", model=Parent, alias="title"
-        ),
-        parent_slug=FieldFilter(parent_slug, model=Parent, alias="slug"),
+        filter_expressions={
+            Child.title.ilike: title,
+            Parent.slug: parent_slug,
+            Parent.title.ilike: parent_title,
+            func.date(Child.created_at): created_at_date,
+        },
         # Сортировка
         order_by=order_by,
     )
