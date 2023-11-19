@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -24,6 +25,7 @@ class ParentBaseSchema(BaseModel):
 
 class ChildListSchema(ChildBaseSchema):
     id: UUID
+    created_at: datetime
 
 
 class ChildDetailSchema(ChildListSchema):

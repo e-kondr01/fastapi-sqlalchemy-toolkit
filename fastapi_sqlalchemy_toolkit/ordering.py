@@ -55,7 +55,7 @@ def ordering_dep(ordering_fields: Sequence[str | InstrumentedAttribute]):
     """
 
     def get_ordering_field(
-        order_by: get_ordering_enum(ordering_fields) | None = None,
+        order_by: get_ordering_enum(ordering_fields) = None,
     ) -> OrderingField | None:
         if order_by:
             desc = False
