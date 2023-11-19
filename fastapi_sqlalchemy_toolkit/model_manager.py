@@ -6,25 +6,27 @@ from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from sqlalchemy import Row, UniqueConstraint, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import contains_eager, load_only
+from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import (
-    BinaryExpression,
-    BooleanClauseList,
-    Null,
-    UnaryExpression,
-)
+from sqlalchemy.sql.elements import UnaryExpression
+from sqlalchemy.sql.functions import Function
+from sqlalchemy.sql.selectable import Exists
 
-from .base_model import Base
 from .filters import null_query_values
 from .ordering import OrderingField
 
-ModelType = TypeVar("ModelType", bound=Base)
+ModelType = TypeVar("ModelType", bound=DeclarativeBase)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 ModelDict = dict[str, Any]
+
+
+def sqlalchemy_model_to_dict(model: ModelType) -> dict:
+    db_obj_dict = model.__dict__.copy()
+    del db_obj_dict["_sa_instance_state"]
+    return db_obj_dict
 
 
 class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
@@ -47,7 +49,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         # str() of fk attr to related model
         # "parent_id": Parent
         # Используется для валидации существования FK при создании/обновлении объекта
-        self.fk_name_to_model: dict[str, Type[Base]] = {}
+        self.fk_name_to_model: dict[str, Type[ModelType]] = {}
 
         self.unique_constraints: List[List[str]] = []
         if hasattr(self.model, "__table_args__"):
@@ -58,12 +60,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     else:
                         self.unique_constraints.append(table_arg._pending_colargs)
 
-        self.reverse_relationships: dict[str, Type[Base]] = {}
-        self.m2m_relationships: dict[str, Type[Base]] = {}
+        self.reverse_relationships: dict[str, Type[ModelType]] = {}
+        self.m2m_relationships: dict[str, Type[ModelType]] = {}
         # Model to related attr
         # Parent : Child.parent
         # Используется при составлении join'ов для фильтрации и сортировки
-        self.models_to_relationship_attrs: dict[Type[Base], InstrumentedAttribute] = {}
+        self.models_to_relationship_attrs: dict[
+            Type[ModelType], InstrumentedAttribute
+        ] = {}
 
         # tablename of Table to str() of fk attr
         # "parent": "parent_id"
@@ -289,8 +293,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         session: AsyncSession,
         pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
-        # TODO: typehint method?
-        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
+        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
+        | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
@@ -326,18 +331,30 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :returns: пагинированный список объектов или Row
         """
-        self.remove_optional_filter_bys(**simple_filters)
-        self.remove_optional_binary_expressions(list_filters)
+        if filter_expressions is None:
+            filter_expressions = {}
+        if nullable_filter_expressions is None:
+            nullable_filter_expressions = {}
+        self.remove_optional_filter_bys(simple_filters)
+        self.handle_filter_expressions(filter_expressions)
+        self.handle_nullable_filter_expressions(nullable_filter_expressions)
+        filter_expressions = filter_expressions | nullable_filter_expressions
+
         stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
         stmt = self.get_joins(
-            stmt, options=options, order_by=order_by, list_filters=list_filters
+            stmt,
+            options=options,
+            order_by=order_by,
+            filter_expressions=filter_expressions,
         )
 
-        for list_filter, value in list_filters.items():
-            if isinstance(list_filter, InstrumentedAttribute):
-                stmt = stmt.filter(list_filter == value)
+        for filter_expression, value in filter_expressions.items():
+            if isinstance(filter_expression, InstrumentedAttribute) or isinstance(
+                filter_expression, Function
+            ):
+                stmt = stmt.filter(filter_expression == value)
             else:
-                stmt = stmt.filter(list_filter(value))
+                stmt = stmt.filter(filter_expression(value))
 
         return await paginate(session, stmt, pagination_params)
 
@@ -395,7 +412,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         order_by: OrderingField | None = None,
-        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
+        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
+        | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
@@ -433,18 +452,28 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :returns: список объектов или Row
         """
-        self.remove_optional_filter_bys(**simple_filters)
-        self.remove_optional_binary_expressions(list_filters)
+        if filter_expressions is None:
+            filter_expressions = {}
+        if nullable_filter_expressions is None:
+            nullable_filter_expressions = {}
+        self.remove_optional_filter_bys(simple_filters)
+        self.handle_filter_expressions(filter_expressions)
+        self.handle_nullable_filter_expressions(nullable_filter_expressions)
+        filter_expressions = filter_expressions | nullable_filter_expressions
+
         stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
         stmt = self.get_joins(
-            stmt, options=options, order_by=order_by, list_filters=list_filters
+            stmt,
+            options=options,
+            order_by=order_by,
+            filter_expressions=filter_expressions,
         )
 
-        for list_filter, value in list_filters.items():
-            if isinstance(list_filter, InstrumentedAttribute):
-                stmt = stmt.filter(list_filter == value)
+        for filter_expression, value in filter_expressions.items():
+            if isinstance(filter_expression, InstrumentedAttribute):
+                stmt = stmt.filter(filter_expression == value)
             else:
-                stmt = stmt.filter(list_filter(value))
+                stmt = stmt.filter(filter_expression(value))
 
         result = await session.execute(stmt)
 
@@ -654,7 +683,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Выполнить валидацию на соответствие ограничениям БД.
         """
         if db_obj:
-            db_obj_dict = db_obj.to_dict()
+            db_obj_dict = sqlalchemy_model_to_dict(db_obj)
             db_obj_dict.update(in_obj)
             in_obj = db_obj_dict
         if self.fk_name_to_model:
@@ -673,9 +702,9 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     def get_joins(
         self,
         base_query: Select,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any],
         options: List[Any] | None = None,
         order_by: OrderingField | None = None,
-        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
     ) -> Select:
         """
         Делает необходимые join'ы при фильтрации и сортировке по полям
@@ -690,14 +719,16 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             and order_by.field.parent.class_ != self.model
         ):
             models_to_join.add(order_by.field.parent.class_)
-        if list_filters:
-            for list_filter in list_filters.keys():
-                if isinstance(list_filter, InstrumentedAttribute):
-                    model = list_filter.parent
-                else:
-                    model = list_filter.__self__.parent
-                if model != self.model:
-                    models_to_join.add(model)
+
+        for filter_expression in filter_expressions.keys():
+            if isinstance(filter_expression, InstrumentedAttribute):
+                model = filter_expression.parent
+            elif isinstance(filter_expression, Function):
+                model = filter_expression.entity_namespace
+            else:
+                model = filter_expression.__self__.parent
+            if model != self.model:
+                models_to_join.add(model)
         for model in models_to_join:
             if model in self.models_to_relationship_attrs:
                 joined_query = joined_query.outerjoin(
@@ -724,28 +755,44 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
     @staticmethod
     def remove_optional_filter_bys(
-        **filters: Any,
+        filters: dict[str, Any],
     ) -> None:
         for filter_by_name, filter_by_value in filters.copy().items():
             if filter_by_value is None:
                 del filters[filter_by_name]
 
     @staticmethod
-    def remove_optional_binary_expressions(
-        list_filters: dict[InstrumentedAttribute | Callable, Any] | None = None,
+    def handle_filter_expressions(
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any]
     ) -> None:
-        if list_filters:
-            for list_filter, value in list_filters.copy().items():
-                if value is None:
-                    del list_filters[list_filter]
+        for filter_expression, value in filter_expressions.copy().items():
+            if value is None:
+                del filter_expressions[filter_expression]
+            elif "ilike" in str(filter_expression):
+                filter_expressions[
+                    filter_expression
+                ] = f"%{filter_expressions[filter_expression]}%"
+
+    @staticmethod
+    def handle_nullable_filter_expressions(
+        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
+    ) -> None:
+        for filter_expression, value in nullable_filter_expressions.copy().items():
+            if value in null_query_values:
+                nullable_filter_expressions[filter_expression] = None
+            elif value is None:
+                del nullable_filter_expressions[filter_expression]
+            elif "ilike" in str(filter_expression):
+                nullable_filter_expressions[
+                    filter_expression
+                ] = f"%{nullable_filter_expressions[filter_expression]}%"
 
     def get_reverse_relation_filter_stmt(
         self,
         field_name: str,
         value: Any,
-    ):
-        relationship = getattr(self.model, field_name)
-        # TODO: type?
+    ) -> Exists:
+        relationship: InstrumentedAttribute = getattr(self.model, field_name)
         return relationship.any(self.reverse_relationships[field_name].id.in_(value))
 
     def assemble_stmt(
@@ -755,8 +802,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         **simple_filters: Any,
-    ):
-        # TODO: return type
+    ) -> Select:
         if select_:
             stmt = select_
         else:
