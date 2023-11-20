@@ -4,9 +4,8 @@ from typing import Annotated, Sequence, Type
 from uuid import uuid4
 
 from fastapi import Depends
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.orm.attributes import InstrumentedAttribute
-
-from .base_model import Base
 
 
 @dataclass
@@ -19,7 +18,7 @@ class OrderingField:
     field: InstrumentedAttribute | str
     desc: bool = False
 
-    def get_directed_field(self, model: Type[Base]):
+    def get_directed_field(self, model: Type[DeclarativeBase]):
         if isinstance(self.field, str):
             field = getattr(model, self.field)
         else:
