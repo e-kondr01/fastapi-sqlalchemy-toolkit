@@ -363,9 +363,9 @@ async def get_my_objects(
 ) -> list[MyObjectListSchema]:
     stmt = select(MyModel)
     if user_id is not None:
-        stmt = stmt.filter_by(user_id=f"%{user_id}%")
+        stmt = stmt.filter_by(user_id=user_id)
     if name is not None:
-        stmt = stmt.filter(MyModel.name.ilike == name)
+        stmt = stmt.filter(MyModel.name.ilike == f"%{name}%")
     if parent_name is not None:
         stmt = stmt.join(MyModel.parent)
         stmt = stmt.filter(ParentModel.name.ilike == f"%{parent_name}%")
