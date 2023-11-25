@@ -46,8 +46,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self.model = model
         self.default_ordering = default_ordering
 
-        # str() of fk attr to related model
-        # "parent_id": Parent
+        # str() of FK attr to related model
+        # "parent_id": <class app.models.parent.Parent>
         # Используется для валидации существования FK при создании/обновлении объекта
         self.fk_name_to_model: dict[str, Type[ModelType]] = {}
 
@@ -69,11 +69,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             Type[ModelType], InstrumentedAttribute
         ] = {}
 
-        # tablename of Table to str() of fk attr
-        # "parent": "parent_id"
-        # Используется для того чтобы соединить название поле fk
-        # с Mapper классом модели, на который оно ссылается
-        table_names_to_fk_names: dict[str, InstrumentedAttribute] = {}
         attr: InstrumentedAttribute
         for attr_name, attr in self.model.__dict__.items():
             # Перебираем только атрибуты модели
@@ -81,23 +76,17 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 # Обрабатываем связи
                 if hasattr(attr, "prop") and isinstance(attr.prop, Relationship):
                     self.models_to_relationship_attrs[attr.prop.mapper.class_] = attr
-                    # Выбираем обратные связи (ManyToOne, ManyToMany)
                     if attr.prop.collection_class == list:
+                        # Выбираем обратные связи (ManyToOne, ManyToMany)
                         self.reverse_relationships[attr_name] = attr.prop.mapper.class_
+                    else:
+                        # Выбираем OneToMany связи
+                        self.fk_name_to_model[
+                            str(attr.expression.right).split(".")[1]
+                        ] = attr.prop.mapper.class_
                     # Выбираем  ManyToMany связи
                     if getattr(attr.prop, "secondary") is not None:
                         self.m2m_relationships[attr_name] = attr.prop.mapper.class_
-
-                # Обрабатываем FK
-                if hasattr(attr, "foreign_keys") and attr.foreign_keys:
-                    table_names_to_fk_names[
-                        str(next(iter(attr.foreign_keys)).column.table)
-                    ] = str(attr).split(".")[1]
-        for rel_table in self.models_to_relationship_attrs.keys():
-            if rel_table.__tablename__ in table_names_to_fk_names:
-                self.fk_name_to_model[
-                    table_names_to_fk_names[rel_table.__tablename__]
-                ] = rel_table
 
     ##################################################################################
     # Public API
