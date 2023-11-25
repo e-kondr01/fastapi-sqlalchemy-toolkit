@@ -15,10 +15,9 @@ REST API и взаимодействии с СУБД через `SQLAlchemy`;
 
 - Методы для CRUD-операций с объектами в БД
 
-- Фильтрация с обработкой необязательных параметров запроса, фильтрация по полям связанных моделей
-с автоматическими необходимыми `join`ами (см. раздел **Фильтрация**)
+- Фильтрация с обработкой необязательных параметров запроса (см. раздел **Фильтрация**)
 
-- Декларативная сортировка с помощью `ordering_dep`, в том числе по полям связанных моделей (см. раздел **Сортировка**)
+- Декларативная сортировка с помощью `ordering_dep` (см. раздел **Сортировка**)
 
 - Валидация существования внешних ключей
 
@@ -82,11 +81,11 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 ## Фильтрация
 
 Для получения списка объектов с фильтрацией `fastapi_sqlalchemy_toolkit` предоставляет два метода:
-`list`, который имеет дополнительную предобработку значений, и `filter`, который не производит скрытых обработок.
+`list`, который осуществляет предобработку значений, и `filter`, который не производит дополнительных обработок.
 Аналогично ведут себя методы `paginated_list` и `paginated_filter`, за исключением того, что они пагинирует результат
 с помощью `fastapi_pagination`.
 
-Пусть у нас есть следующие модели:
+Пусть имеются следующие модели:
 
 ```python
 class Base(DeclarativeBase):
@@ -121,7 +120,7 @@ child_manager = ModelManager[Child, CreateChildSchema, PatchChildSchema](
 )
 ```
 
-### Простая фильтрация по точному соответствию через API
+### Простая фильтрация по точному соответствию
 
 ```python
 @router.get("/children")
@@ -135,14 +134,14 @@ async def get_list(
     )
 ```
 
-Запрос `GET /children` сгенерирует следующий SQL код:
+Запрос `GET /children` сгенерирует следующий SQL:
 
 ```SQL
 SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
 FROM child
 ```
 
-Запрос `GET /children?slug=child-1` сгенерирует следующий SQL код:
+Запрос `GET /children?slug=child-1` сгенерирует следующий SQL:
 
 ```SQL
 SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
@@ -150,26 +149,29 @@ FROM child
 WHERE child.slug = :slug_1
 ```
 
-По конвенции FastAPI, необязательные параметры запроса типизируются подобно `slug: str | None = None`.
-При этом ожидается, что при запросе `GET /children` будут возвращены все объекты `Child`, а не только те,
-у которых `slug is null`. Поэтому метод `list` (`paginated_list`) отбрасывает фильтрацию по этому параметру,
-если он не передан 
-(*читайте раздел "Фильтрация без дополнительной обработки" для того, чтобы узнать, как избежать такого поведения*).
+По конвенции `FastAPI`, необязательные параметры запроса типизируются как `slug: str | None = None`.
+При этом клиенты API обычно ожидают, что при запросе `GET /children` будут возвращены все объекты `Child`,
+а не только те, у которых `slug is null`. Поэтому метод `list` (`paginated_list`) отбрасывает фильтрацию
+по этому параметру, если его значение не передано.
 
 ### Более сложная фильтрация
 
-Чтобы использовать фильтрацию не только по точному соответствию с атрибутом модели,
-в методах `list` и `paginated_list` можно использовать параметр `filter_expressions`.
+Чтобы использовать фильтрацию не только по точному соответствию атрибуту модели,
+в методах `list` и `paginated_list` можно передать параметр `filter_expressions`.
 
-Параметр `filter_expressions` принимает словарь, в котором ключи -- это:
+Параметр `filter_expressions` принимает словарь, в котором ключи могут быть:
 
-1. Атрибуты основной модели (`Child.title`) или связанной модели (`Parent.title`)
+1. Атрибутами основной модели (`Child.title`) 
 
-2. Операторы атрибутов модели (`Child.title.ilike`)
+2. Операторами атрибутов модели (`Child.title.ilike`)
 
-3. Функции `sqlalchemy` над атрибутами модели (`func.date(Child.created_at)`)
+3. Функциями `sqlalchemy` над атрибутами модели (`func.date(Child.created_at)`)
 
-Значение по ключу -- это значение, по которому должна осуществляться фильтрация.
+4. Атрибутами связанной модели (`Parent.title`). Работает в том случае, если
+это модель, напрямую связанная с основной, а также если модели связывает только один внешний ключ.
+
+Значение по ключу в словаре `filter_expressions` -- это значение,
+по которому должна осуществляться фильтрация.
 
 Пример фильтрации по **оператору** атрибута модели:
 
@@ -187,48 +189,20 @@ async def get_list(
     )
 ```
 
-Запрос `GET /children` сгенерирует следующий SQL код:
+Запрос `GET /children` сгенерирует следующий SQL:
 
 ```SQL
 SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
 FROM child
 ```
 
-Запрос `GET /children?title=ch` сгенерирует следующий SQL код:
+Запрос `GET /children?title=ch` сгенерирует следующий SQL:
 
 ```SQL
 SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
 FROM child 
 WHERE lower(child.title) LIKE lower(:title_1)
 ```
-
-Пример фильтрации по атрибуту **связанной** модели:
-
-```python
-@router.get("/children")
-async def get_list(
-    session: Session,
-    parent_title: str | None = None,
-) -> list[ChildListSchema]:
-    return await child_manager.list(
-        session,
-        filter_expressions={
-            Parent.title.ilike: title
-        },
-    )
-```
-
-Запрос `GET /children?parent_title=ch` сгенерирует следующий SQL код:
-
-```SQL
-SELECT parent.title, parent.slug, parent.id, parent.created_at, 
-child.title AS title_1, child.slug AS slug_1, child.parent_id, child.id AS id_1, child.created_at AS created_at_1 
-FROM child LEFT OUTER JOIN parent ON parent.id = child.parent_id 
-WHERE lower(parent.title) LIKE lower(:title_1)
-```
-
-При фильтрации по полям связанных моделей через параметр `filter_expression` необходимые для фильтрации
-`join` будут сделаны автоматически. **Важно**: работает только для моделей, напрямую связанных с основной.
 
 Пример фильтрации по **функции `sqlalchemy`** над атрибутом модели:
 
@@ -246,7 +220,7 @@ async def get_list(
     )
 ```
 
-Запрос `GET /children?created_at_date=2023-11-19` сгенерирует следующий SQL код:
+Запрос `GET /children?created_at_date=2023-11-19` сгенерирует следующий SQL:
 
 ```SQL
 SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
@@ -254,10 +228,41 @@ FROM child
 WHERE date(child.created_at) = :date_1
 ```
 
+Пример фильтрации по атрибуту связанной модели:
+
+```python
+@router.get("/children")
+async def get_list(
+    session: Session,
+    parent_title: str | None = None,
+) -> list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Parent.title.ilike: title
+        },
+    )
+```
+
+Запрос `GET /children?parent_title=ch` сгенерирует следующий SQL:
+
+```SQL
+SELECT parent.title, parent.slug, parent.id, parent.created_at, 
+child.title AS title_1, child.slug AS slug_1, child.parent_id, child.id AS id_1,
+child.created_at AS created_at_1 
+FROM child LEFT OUTER JOIN parent ON parent.id = child.parent_id 
+WHERE lower(parent.title) LIKE lower(:title_1)
+```
+
+При фильтрации по полям связанных моделей через параметр `filter_expression`,
+ необходимые для фильтрации `join` будут сделаны автоматически.
+**Важно**: работает только для моделей, напрямую связанных с основной, и только тогда, когда
+эти модели связывает единственный внешний ключ.
+
 ### Фильтрация без дополнительной обработки
 
 Для фильтрации без дополнительной обработки в методах `list` и `paginated_list` можно
-использовать параметр `where`. Переданное в этот параметр значение будет напрямую
+использовать параметр `where`. Значение этого параметра будет напрямую
 передано в метод `.where()` экземпляра `Select` в выражении запроса `SQLAlchemy`.
 
 ```python
@@ -265,7 +270,7 @@ WHERE date(child.created_at) = :date_1
 ```
 
 Использовать параметр `where` методов `list` и `paginated_list` имеет смысл тогда,
-когда эти методы используются в списочном API эндпоинте и предобработка каких-то параметров
+когда эти методы используются в списочном API эндпоинте и предобработка части параметров
 запроса полезна, однако нужно также добавить фильтр без предобработок от `fastapi_sqlalchemy_toolkit`.
 
 В том случае, когда предобработки `fastapi_sqlalchemy_toolkit` не нужны вообще, стоит использовать методы
@@ -283,12 +288,12 @@ FROM item
 WHERE itme.created is null
 ```
 
-Конкретно, в отличие от метода `list`, метод `filter`:
+В отличие от метода `list`, метод `filter`:
 
-1. Не игнорирует простые фильтры (kwargs) со значением None
+1. Не игнорирует простые фильтры (`kwargs`) со значением `None`
 
-2. Не имеет параметра `filter_expressions`, т. е. не будет выполнять `join`, необходимые для фильтрации
-по полям связанных моделей.
+2. Не имеет параметра `filter_expressions`, т. е. не будет выполнять `join`,
+необходимые для фильтрации по полям связанных моделей.
 
 ### Фильтрация по `null` через API
 
@@ -317,7 +322,7 @@ async def get_my_objects(
     )
 ```
 
-Параметру с поддержкой фильтрации по null нужно указать возможный тип
+Параметру с поддержкой фильтрации по `null` нужно указать возможный тип
 `fastapi_sqlalchemy_toolkit.NullableQuery`.
 
 Теперь при запросе `GET /my-objects?deleted_at=` или `GET /my-objects?deleted_at=null`
@@ -401,7 +406,8 @@ async def get_my_objects(
 ## Сортировка
 
 `fastapi-sqlalchemy-toolkit` поддеживает декларативную сортировку по полям модели, 
-а также по полям связанных моделей. При этом необходимые для сортировки по полям
+а также по полям связанных моделей (если это модель, напрямую связанная с основной,
+а также эти модели связывает единственный внешний ключ). При этом необходимые для сортировки по полям
 связанных моделей join'ы будут сделаны автоматически.
 
 Для применения декларативной сортировки нужно:

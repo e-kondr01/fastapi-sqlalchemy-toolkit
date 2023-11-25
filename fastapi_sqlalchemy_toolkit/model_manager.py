@@ -151,14 +151,15 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         экземпляр Row, а не ModelType.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: экземпляр модели, Row или None, если подходящего нет в БД
         """
@@ -183,7 +184,17 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param session: сессия SQLAlchemy
 
-        :param attrs: все параметры, которые можно передать в метод get
+        :param options: параметры для метода .options() загрузчика SQLAlchemy
+
+        :param order_by: поле для сортировки (экземпляр OrderingField)
+
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        экземпляр Row, а не ModelType.
+
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: экземпляр модели или Row
 
@@ -221,9 +232,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param session: сессия SQLAlchemy
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
+        :param options: параметры для метода .options() загрузчика SQLAlchemy
+
+        :param order_by: поле для сортировки (экземпляр OrderingField)
+
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: True если объект существует, иначе False
         """
@@ -246,8 +262,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     ) -> AbstractPage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
-        Параметры фильтрации, передаваемые в attrs со значением None,
-        будут применены как фильтрация по null.
 
         :param session: сессия SQLAlchemy
 
@@ -257,20 +271,13 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param where: параметры для метода .where() селекта SQLAlchemy.
-        Может приняться для передачи параметров фильтрации,
-        которые нельзя передать в attrs.
-        Например, для фильтрации с использованием метода .any() у поля-связи модели.
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelType.
-        Примечание: фильтрация и сортировка по связанным моделям скорее всего
-        не будут работать вместе с этим параметром.
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
-        Если значение параметра None, то параметр игнорируется.
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: пагинированный список объектов или Row
         """
@@ -292,8 +299,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     ) -> AbstractPage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
-        Параметры фильтрации, передаваемые в attrs со значением None,
-        будут пропущены.
+        Пропускает фильтры, значения которых None.
 
         :param session: сессия SQLAlchemy
 
@@ -301,22 +307,26 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
+        :param filter_expressions: словарь, отображающий поля для фильтрации
+        на их значения. Фильтрация по None не применяется. См. раздел "фильтрация"
+        в документации.
+
+        :param nullable_filter_expressions: словарь, отображающий поля для фильтрации
+        на их значения. Фильтрация по None применятеся, если значение
+        в fastapi_sqlalchemy_toolkit.NullableQuery. См. раздел "фильтрация"
+        в документации.
+
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param where: параметры для метода .where() селекта SQLAlchemy.
-        Может приняться для передачи параметров фильтрации,
-        которые нельзя передать в attrs.
-        Например, для фильтрации с использованием метода .any() у поля-связи модели.
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelType.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
-        не будут работать вместе с этим параметром.
+        не будет работать вместе с этим параметром.
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
-        Если значение параметра None, то параметр игнорируется.
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: пагинированный список объектов или Row
         """
@@ -358,9 +368,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         **simple_filters: Any,
     ) -> List[ModelType] | List[Row]:
         """
-        Получение списка объектов с фильтрами.
-        Параметры фильтрации, передаваемые в attrs со значением None,
-        будут применеы как фильтрация по null.
+        Получение списка объектов с фильтрами
 
         :param session: сессия SQLAlchemy
 
@@ -368,23 +376,16 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param where: параметры для метода .where() селекта SQLAlchemy.
-        Может приняться для передачи параметров фильтрации,
-        которые нельзя передать в attrs.
-        Например, для фильтрации с использованием метода .any() у поля-связи модели.
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         список Row, а не ModelType.
-        Примечание: фильтрация и сортировка по связанным моделям скорее всего
-        не будут работать вместе с этим параметром.
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
-        Если значение параметра None, то параметр игнорируется.
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: список объектов или Row
         """
@@ -412,19 +413,24 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     ) -> List[ModelType] | List[Row]:
         """
         Получение списка объектов с фильтрами.
-        Параметры фильтрации, передаваемые в attrs со значением None,
-        будут пропущены.
+        Пропускает фильтры, значения которых None.
 
         :param session: сессия SQLAlchemy
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
+        :param filter_expressions: словарь, отображающий поля для фильтрации
+        на их значения. Фильтрация по None не применяется. См. раздел "фильтрация"
+        в документации.
+
+        :param nullable_filter_expressions: словарь, отображающий поля для фильтрации
+        на их значения. Фильтрация по None применятеся, если значение
+        в fastapi_sqlalchemy_toolkit.NullableQuery. См. раздел "фильтрация"
+        в документации.
+
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param where: параметры для метода .where() селекта SQLAlchemy.
-        Может приняться для передачи параметров фильтрации,
-        которые нельзя передать в attrs.
-        Например, для фильтрации с использованием метода .any() у поля-связи модели.
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
@@ -434,10 +440,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
-        Если значение параметра None, то параметр игнорируется.
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: список объектов или Row
         """
@@ -485,9 +489,14 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param session: сессия SQLAlchemy
 
-        :param attrs: параметры для выборки объекта. Название параметра используется как
-        название поля модели. Значение параметра может быть примитивным типом для
-        точного сравнения
+        :param options: параметры для метода .options() загрузчика SQLAlchemy
+
+        :param order_by: поле для сортировки (экземпляр OrderingField)
+
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
 
         :returns: количество объектов по переданным фильтрам
         """
