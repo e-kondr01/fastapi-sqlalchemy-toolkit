@@ -662,6 +662,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         связанных моделей.
         Поддерживает только глубину связи 1.
         """
+        if options is not None:
+            if not isinstance(options, list):
+                options = [options]
+        else:
+            options = []
+
         joined_query = base_query
         models_to_join = set()
         if (
@@ -684,17 +690,18 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             if model in self.models_to_relationship_attrs:
                 joined_query = joined_query.outerjoin(
                     self.models_to_relationship_attrs[model]
-                ).options(contains_eager(self.models_to_relationship_attrs[model]))
+                )
 
         if options:
             # Если в .options передана стратегия загрузки модели,
             # которая должна быть подгружена для фильтрации или сортировки,
-            # нужно убрать её из options для избежания конфликтов.
-            options[:] = [
-                option
-                for option in options
-                if option.path.entity.class_ not in models_to_join
-            ]
+            # то не добавляем contains_eager для этой модели
+            models_for_additional_options = models_to_join.copy()
+            for option in options:
+                if option.path.entity.class_ in models_for_additional_options:
+                    models_for_additional_options.remove(option.path.entity.class_)
+            for model in models_for_additional_options:
+                options.append(contains_eager(self.models_to_relationship_attrs[model]))
         return joined_query
 
     def get_order_by_expression(self, order_by: OrderingField | None):
