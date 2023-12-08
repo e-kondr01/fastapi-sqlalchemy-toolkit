@@ -180,7 +180,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         **simple_filters: Any,
     ) -> ModelType | Row:
         """
-        Получение одного экземпляра модели или возвращение HTTP ответа 404.
+        Получение одного экземпляра модели или вызов HTTP исключения 404.
 
         :param session: сессия SQLAlchemy
 
@@ -209,10 +209,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             select_=select_,
             **simple_filters,
         )
-        attrs_str = ", ".join(
-            [f"{key}={value}" for key, value in simple_filters.items()]
-        )
         if not db_obj:
+            attrs_str = ", ".join(
+                [f"{key}={value}" for key, value in simple_filters.items()]
+            )
+            if where:
+                attrs_str += f", {where}"
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"{self.model.__tablename__} with {attrs_str} not found",
@@ -223,7 +225,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         options: List[Any] | Any | None = None,
-        order_by: OrderingField | None = None,
         where: Any | None = None,
         **simple_filters: Any,
     ) -> bool:
@@ -234,8 +235,6 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
-
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
@@ -244,11 +243,53 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: True если объект существует, иначе False
         """
         stmt = self.assemble_stmt(
-            select(self.model.id), order_by, options, where, **simple_filters
+            select(self.model.id), None, options, where, **simple_filters
         )
-
         result = await session.execute(stmt)
         return result.first() is not None
+
+    async def exists_or_404(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = None,
+        where: Any | None = None,
+        **simple_filters: Any,
+    ) -> bool:
+        """
+        Проверка существования экземпляра модели.
+        Если объект не существует, вызывает HTTP исключение 404.
+
+        :param session: сессия SQLAlchemy
+
+        :param options: параметры для метода .options() загрузчика SQLAlchemy
+
+        :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param simple_filters: параметры для фильтрации по точному соответствию,
+        аналогично методу .filter_by() SQLAlchemy
+
+        :returns: True, если объект существует
+
+        :raises: fastapi.HTTPException 404
+        """
+
+        exists = await self.exists(
+            session,
+            options=options,
+            where=where,
+            **simple_filters,
+        )
+        if not exists:
+            attrs_str = ", ".join(
+                [f"{key}={value}" for key, value in simple_filters.items()]
+            )
+            if where:
+                attrs_str += f", {where}"
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"{self.model.__tablename__} with {attrs_str} does not exist",
+            )
+        return True
 
     async def paginated_filter(
         self,
