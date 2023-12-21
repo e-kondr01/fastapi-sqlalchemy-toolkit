@@ -1,7 +1,7 @@
 from typing import Any, Callable, Generic, Iterable, List, Type, TypeVar
 
 from fastapi import HTTPException, status
-from fastapi_pagination.bases import AbstractPage, AbstractParams
+from fastapi_pagination.bases import AbstractParams, BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from sqlalchemy import Row, UniqueConstraint, func, select
@@ -300,7 +300,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> AbstractPage[ModelType | Row]:
+    ) -> BasePage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
 
@@ -337,7 +337,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> AbstractPage[ModelType | Row]:
+    ) -> BasePage[ModelType | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
         Пропускает фильтры, значения которых None.
