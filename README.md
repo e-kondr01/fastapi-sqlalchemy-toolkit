@@ -578,13 +578,13 @@ class PersonCreateSchema(BaseModel):
 `fastapi-sqlalchemy-toolkit` предоставляет утилиту для фильтрации по списку значений, переданного в строку через запятую:
 ```python
 from uuid import UUID
-from fastapi_sqlalchemy_toolkit.utils import comma_list_query, get_comma_list_values
+from fastapi_sqlalchemy_toolkit.utils import CommaSepQuery, comma_sep_q_to_list
 
 @router.get("/children")
 async def get_child_objects(
     session: Session,
-    ids: comma_list_query = None,
+    ids: CommaSepQuery = None,
 ) -> list[ChildListSchema]
-    ids = get_comma_list_values(ids, UUID)
-    return await child_manager.list(session, id=FieldFilter(ids, operator="in_"))
+    ids = comma_sep_q_to_list(ids, UUID)
+    return await child_manager.list(session, filter_expressions={Child.id.in_: ids})
 ```

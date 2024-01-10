@@ -40,15 +40,16 @@ def make_partial_model(model: Type[BaseModelT]) -> Type[BaseModelT]:
 
 # Утилиты для передачи нескольких значений для фильтрации в одном
 # квери параметре через запятую
-comma_list_query = Annotated[
+CommaSepQuery = Annotated[
     str | None, Query(description="Несколько значений можно передать через запятую")
 ]
 
 
-def get_comma_list_values(query: str | None, type_: Type) -> list | None:
+def comma_sep_q_to_list(query: str | None, type_: Type) -> list | None:
     """
     :param query: Значение квери параметра
-    :param type_: Тип значений в списке
+    (строка со значениями, перечисленными через запятую)
+    :param type_: Тип значений в списке для конвертирования
     """
     if query:
         return [type_(query_value) for query_value in query.split(",")]
