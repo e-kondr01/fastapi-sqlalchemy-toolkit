@@ -298,6 +298,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
+        transformer: Callable | None = None,
         **simple_filters: Any,
     ) -> BasePage[ModelT | Row]:
         """
@@ -314,13 +315,17 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelT.
 
+        :param transformer: функция для преобразования атрибутов Row к
+        модели Pydantic в пагинированном результате. См:
+        https://uriyyo-fastapi-pagination.netlify.app/integrations/sqlalchemy/#scalar-column
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
         :returns: пагинированный список объектов или Row
         """
         stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
-        return await paginate(session, stmt)
+        return await paginate(session, stmt, transformer=transformer)
 
     async def paginated_list(
         self,
@@ -332,6 +337,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
+        transformer: Callable | None = None,
         **simple_filters: Any,
     ) -> BasePage[ModelT | Row]:
         """
@@ -359,6 +365,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         страницу Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будет работать вместе с этим параметром.
+
+        :param transformer: функция для преобразования атрибутов Row к
+        модели Pydantic в пагинированном результате. См:
+        https://uriyyo-fastapi-pagination.netlify.app/integrations/sqlalchemy/#scalar-column
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
@@ -390,7 +400,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             else:
                 stmt = stmt.filter(filter_expression(value))
 
-        return await paginate(session, stmt)
+        return await paginate(session, stmt, transformer=transformer)
 
     async def filter(
         self,
