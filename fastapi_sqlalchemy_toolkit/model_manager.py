@@ -1,7 +1,7 @@
 from typing import Any, Callable, Generic, Iterable, List, Type, TypeVar
 
 from fastapi import HTTPException, status
-from fastapi_pagination.bases import AbstractParams, BasePage
+from fastapi_pagination.bases import BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from sqlalchemy import Row, UniqueConstraint, func, select
@@ -17,22 +17,22 @@ from sqlalchemy.sql.selectable import Exists
 from .filters import null_query_values
 from .ordering import OrderingField
 
-ModelType = TypeVar("ModelType", bound=DeclarativeBase)
-CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
-UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
+ModelT = TypeVar("ModelT", bound=DeclarativeBase)
+CreateSchemaT = TypeVar("CreateSchemaT", bound=BaseModel)
+UpdateSchemaT = TypeVar("UpdateSchemaT", bound=BaseModel)
 ModelDict = dict[str, Any]
 
 
-def sqlalchemy_model_to_dict(model: ModelType) -> dict:
+def sqlalchemy_model_to_dict(model: ModelT) -> dict:
     db_obj_dict = model.__dict__.copy()
     del db_obj_dict["_sa_instance_state"]
     return db_obj_dict
 
 
-class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
+class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def __init__(
         self,
-        model: Type[ModelType],
+        model: Type[ModelT],
         default_ordering: InstrumentedAttribute | UnaryExpression | None = None,
     ) -> None:
         """
@@ -49,7 +49,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         # str() of FK attr to related model
         # "parent_id": <class app.models.parent.Parent>
         # Используется для валидации существования FK при создании/обновлении объекта
-        self.fk_name_to_model: dict[str, Type[ModelType]] = {}
+        self.fk_name_to_model: dict[str, Type[ModelT]] = {}
 
         self.unique_constraints: List[List[str]] = []
         if hasattr(self.model, "__table_args__"):
@@ -60,13 +60,13 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                     else:
                         self.unique_constraints.append(table_arg._pending_colargs)
 
-        self.reverse_relationships: dict[str, Type[ModelType]] = {}
-        self.m2m_relationships: dict[str, Type[ModelType]] = {}
+        self.reverse_relationships: dict[str, Type[ModelT]] = {}
+        self.m2m_relationships: dict[str, Type[ModelT]] = {}
         # Model to related attr
         # Parent : Child.parent
         # Используется при составлении join'ов для фильтрации и сортировки
         self.models_to_relationship_attrs: dict[
-            Type[ModelType], InstrumentedAttribute
+            Type[ModelT], InstrumentedAttribute
         ] = {}
 
         attr: InstrumentedAttribute
@@ -95,11 +95,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def create(
         self,
         session: AsyncSession,
-        in_obj: CreateSchemaType | None = None,
+        in_obj: CreateSchemaT | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
         **attrs: Any,
-    ) -> ModelType:
+    ) -> ModelT:
         """
         Создание экземпляра модели и сохранение в БД.
         Также выполняет валидацию на уровне БД.
@@ -141,7 +141,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> ModelType | Row | None:
+    ) -> ModelT | Row | None:
         """
         Получение одного экземпляра модели при существовании
 
@@ -154,7 +154,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        экземпляр Row, а не ModelType.
+        экземпляр Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
@@ -178,7 +178,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> ModelType | Row:
+    ) -> ModelT | Row:
         """
         Получение одного экземпляра модели или вызов HTTP исключения 404.
 
@@ -191,7 +191,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        экземпляр Row, а не ModelType.
+        экземпляр Row, а не ModelT.
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
@@ -294,19 +294,16 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def paginated_filter(
         self,
         session: AsyncSession,
-        pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> BasePage[ModelType | Row]:
+    ) -> BasePage[ModelT | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
 
         :param session: сессия SQLAlchemy
-
-        :pagination_params: параметры пагинации из fastapi_pagination
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
@@ -315,7 +312,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        страницу Row, а не ModelType.
+        страницу Row, а не ModelT.
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
@@ -323,12 +320,11 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :returns: пагинированный список объектов или Row
         """
         stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
-        return await paginate(session, stmt, pagination_params)
+        return await paginate(session, stmt)
 
     async def paginated_list(
         self,
         session: AsyncSession,
-        pagination_params: AbstractParams,
         order_by: OrderingField | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
         nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
@@ -337,14 +333,12 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         where: Any | None = None,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> BasePage[ModelType | Row]:
+    ) -> BasePage[ModelT | Row]:
         """
         Получение списка объектов с фильтрами и пагинацией.
         Пропускает фильтры, значения которых None.
 
         :param session: сессия SQLAlchemy
-
-        :pagination_params: параметры пагинации из fastapi_pagination
 
         :param order_by: поле для сортировки (экземпляр OrderingField)
 
@@ -362,7 +356,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        страницу Row, а не ModelType.
+        страницу Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будет работать вместе с этим параметром.
 
@@ -396,7 +390,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             else:
                 stmt = stmt.filter(filter_expression(value))
 
-        return await paginate(session, stmt, pagination_params)
+        return await paginate(session, stmt)
 
     async def filter(
         self,
@@ -407,7 +401,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         unique: bool = False,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> List[ModelType] | List[Row]:
+    ) -> List[ModelT] | List[Row]:
         """
         Получение списка объектов с фильтрами
 
@@ -423,7 +417,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         у результата SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        список Row, а не ModelType.
+        список Row, а не ModelT.
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
@@ -451,7 +445,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         unique: bool = False,
         select_: Select | None = None,
         **simple_filters: Any,
-    ) -> List[ModelType] | List[Row]:
+    ) -> List[ModelT] | List[Row]:
         """
         Получение списка объектов с фильтрами.
         Пропускает фильтры, значения которых None.
@@ -477,7 +471,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         у результата SQLAlchemy
 
         :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
-        список Row, а не ModelType.
+        список Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
@@ -554,13 +548,13 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     async def update(
         self,
         session: AsyncSession,
-        db_obj: ModelType,
-        in_obj: UpdateSchemaType | None = None,
+        db_obj: ModelT,
+        in_obj: UpdateSchemaT | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
         commit: bool = True,
         exclude_unset: bool = True,
         **attrs: Any,
-    ) -> ModelType:
+    ) -> ModelT:
         """
         Обновление экземпляра модели в БД.
         Также выполняет валидацию на уровне БД.
@@ -604,8 +598,8 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return db_obj
 
     async def delete(
-        self, session: AsyncSession, db_obj: ModelType, commit: bool = True
-    ) -> ModelType | None:
+        self, session: AsyncSession, db_obj: ModelT, commit: bool = True
+    ) -> ModelT | None:
         """
         Удаление экземпляра модели из БД.
 
@@ -628,7 +622,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         in_obj: ModelDict,
-        db_obj: ModelType | None = None,
+        db_obj: ModelT | None = None,
     ) -> ModelDict:
         """
         Выполнить валидацию на соответствие ограничениям БД.
@@ -849,7 +843,7 @@ class ModelManager(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         self,
         session: AsyncSession,
         in_obj: ModelDict,
-        db_obj: ModelType | None = None,
+        db_obj: ModelT | None = None,
     ) -> None:
         """
         Проверить соблюдение уникальности полей.

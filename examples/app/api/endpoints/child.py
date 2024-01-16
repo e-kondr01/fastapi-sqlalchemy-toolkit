@@ -32,7 +32,6 @@ children_ordering_fields = (Parent.created_at, Parent.title, "created_at", "titl
 async def get_list(
     session: Session,
     order_by: ordering_dep(children_ordering_fields),
-    pagination_params: PaginationParams,
     title: str | None = None,
     slug: str | None = None,
     parent_title: str | None = None,
@@ -42,7 +41,6 @@ async def get_list(
     return await child_manager.paginated_list(
         # Обязательные параметры
         session,
-        pagination_params,
         # Фильтры
         slug=slug,
         filter_expressions={
