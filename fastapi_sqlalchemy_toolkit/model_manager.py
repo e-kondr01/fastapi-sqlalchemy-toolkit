@@ -139,7 +139,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         order_by: OrderingField | None = None,
         where: Any | None = None,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         **simple_filters: Any,
     ) -> ModelT | Row | None:
         """
@@ -153,7 +153,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         экземпляр Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
@@ -163,10 +163,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: экземпляр модели, Row или None, если подходящего нет в БД
         """
-        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
 
         result = await session.execute(stmt)
-        if select_ is None:
+        if base_stmt is None:
             return result.scalars().first()
         return result.first()
 
@@ -176,7 +176,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         order_by: OrderingField | None = None,
         where: Any | None = None,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         **simple_filters: Any,
     ) -> ModelT | Row:
         """
@@ -190,7 +190,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         экземпляр Row, а не ModelT.
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
@@ -206,7 +206,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             options=options,
             order_by=order_by,
             where=where,
-            select_=select_,
+            base_stmt=base_stmt,
             **simple_filters,
         )
         if not db_obj:
@@ -297,7 +297,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         order_by: OrderingField | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         transformer: Callable | None = None,
         **simple_filters: Any,
     ) -> BasePage[ModelT | Row]:
@@ -312,7 +312,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelT.
 
         :param transformer: функция для преобразования атрибутов Row к
@@ -324,7 +324,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: пагинированный список объектов или Row
         """
-        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
         return await paginate(session, stmt, transformer=transformer)
 
     async def paginated_list(
@@ -336,7 +336,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         transformer: Callable | None = None,
         **simple_filters: Any,
     ) -> BasePage[ModelT | Row]:
@@ -361,7 +361,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будет работать вместе с этим параметром.
@@ -384,7 +384,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.handle_nullable_filter_expressions(nullable_filter_expressions)
         filter_expressions = filter_expressions | nullable_filter_expressions
 
-        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
         stmt = self.get_joins(
             stmt,
             options=options,
@@ -409,7 +409,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         **simple_filters: Any,
     ) -> List[ModelT] | List[Row]:
         """
@@ -426,7 +426,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         список Row, а не ModelT.
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
@@ -434,10 +434,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: список объектов или Row
         """
-        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
         result = await session.execute(stmt)
 
-        if select_ is None:
+        if base_stmt is None:
             if unique:
                 return result.scalars().unique().all()
             return result.scalars().all()
@@ -453,7 +453,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         **simple_filters: Any,
     ) -> List[ModelT] | List[Row]:
         """
@@ -480,7 +480,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
 
-        :param select_: объект Select для SQL запроса. Если передан, то метод вернёт
+        :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         список Row, а не ModelT.
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
@@ -499,7 +499,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.handle_nullable_filter_expressions(nullable_filter_expressions)
         filter_expressions = filter_expressions | nullable_filter_expressions
 
-        stmt = self.assemble_stmt(select_, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
         stmt = self.get_joins(
             stmt,
             options=options,
@@ -515,7 +515,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         result = await session.execute(stmt)
 
-        if select_ is None:
+        if base_stmt is None:
             if unique:
                 return result.scalars().unique().all()
             return result.scalars().all()
@@ -649,9 +649,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.validate_unique_constraints(session, in_obj)
         return in_obj
 
-    def get_select(self, select_: Select | None = None, **kwargs) -> Select:
-        if select_ is not None:
-            return select_
+    def get_select(self, base_stmt: Select | None = None, **kwargs) -> Select:
+        if base_stmt is not None:
+            return base_stmt
         return select(self.model)
 
     def get_joins(
@@ -759,16 +759,16 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
     def assemble_stmt(
         self,
-        select_: Select | None = None,
+        base_stmt: Select | None = None,
         order_by: OrderingField | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         **simple_filters: Any,
     ) -> Select:
-        if select_ is not None:
-            stmt = select_
+        if base_stmt is not None:
+            stmt = base_stmt
         else:
-            stmt = self.get_select(select_=select_, order_by=order_by, **simple_filters)
+            stmt = self.get_select(base_stmt=base_stmt, order_by=order_by, **simple_filters)
 
         for field_name, value in simple_filters.copy().items():
             if field_name in self.reverse_relationships:
