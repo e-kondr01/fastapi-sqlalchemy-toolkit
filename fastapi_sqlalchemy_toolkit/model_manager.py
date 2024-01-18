@@ -213,7 +213,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             attrs_str = ", ".join(
                 [f"{key}={value}" for key, value in simple_filters.items()]
             )
-            if where:
+            if where is not None:
                 attrs_str += f", {where}"
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -283,7 +283,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             attrs_str = ", ".join(
                 [f"{key}={value}" for key, value in simple_filters.items()]
             )
-            if where:
+            if where is not None:
                 attrs_str += f", {where}"
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
