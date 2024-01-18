@@ -111,7 +111,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param refresh_attribute_names: названия полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
 
-        :param commit: нужно ли вызывать `session.commit()`
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
 
         :param attrs: дополнительные значения полей создаваемого экземпляра
         (какие-то поля можно установить напрямую,
@@ -128,9 +129,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.run_db_validation(session, in_obj=create_data)
         db_obj = self.model(**create_data)
         session.add(db_obj)
-        if commit:
-            await session.commit()
-            await session.refresh(db_obj, attribute_names=refresh_attribute_names)
+        await self.maybe_commit(session, commit)
+        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def get(
@@ -582,7 +582,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param refresh_attribute_names: названия полей, которые нужно обновить
         (может использоваться для подгрузки связанных полей)
 
-        :param commit: нужно ли вызывать `session.commit()`
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
 
         :param exclude_unset: передаётся в метод `.model_dump()` Pydantic модели.
         При использовании метода в PATCH-запросах имеет смысл оставлять его True
@@ -602,9 +603,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         for field in update_data:
             setattr(db_obj, field, update_data[field])
         session.add(db_obj)
-        if commit:
-            await session.commit()
-            await session.refresh(db_obj, attribute_names=refresh_attribute_names)
+        await self.maybe_commit(session, commit)
+        await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
     async def delete(
@@ -617,16 +617,33 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param db_obj: удаляемый объект
 
-        :param commit: нужно ли вызывать `session.commit()`
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
         """
         await session.delete(db_obj)
-        if commit:
-            await session.commit()
+        await self.maybe_commit(session, commit)
         return db_obj
 
     ##################################################################################
     # Internal methods
     ##################################################################################
+
+    @staticmethod
+    async def maybe_commit(session: AsyncSession, commit: bool = True) -> None:
+        """
+        Обработка необходимости коммита при разном использовании сессии:
+        подходах commit as you go и begin once.
+
+        Если используется подход commit as you go, и параметр :commit: передан
+        True, то выполняется commit.
+
+        Если используется подход begin once (`async with session.begin():`),
+        то commit не выполняется, чтобы не закрывать транзакцию в контекстном
+        менеджере.
+        """
+
+        if not session.sync_session._trans_context_manager and commit:
+            await session.commit()
 
     async def run_db_validation(
         self,
@@ -768,7 +785,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         if base_stmt is not None:
             stmt = base_stmt
         else:
-            stmt = self.get_select(base_stmt=base_stmt, order_by=order_by, **simple_filters)
+            stmt = self.get_select(
+                base_stmt=base_stmt, order_by=order_by, **simple_filters
+            )
 
         for field_name, value in simple_filters.copy().items():
             if field_name in self.reverse_relationships:
