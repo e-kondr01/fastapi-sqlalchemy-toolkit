@@ -450,6 +450,57 @@ async def get_child_objects(
     return await child_manager.list(session=session, order_by=order_by)
 ```
 
+## Транзакции
+
+`fastapi-sqlalchemy-toolkit` поддерживает оба подхода к работе с транзакциями `SQAlchemy`.
+
+### Commit as you go
+
+https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go
+
+```python
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from app.managers import my_model_manager
+
+...
+
+    engine = create_async_engine(
+        "...",
+    )
+    async with async_sessionmaker(engine) as session:
+        # This call produces SQL COMMIT
+        created_obj = await my_model_manager.create(session, input_data)
+        # This call does not produce SQL COMMIT
+        await my_model_manager.update(session, created_obj, name="updated_name", commit=False)
+    # Only 1st statement is persisted
+```
+
+### Begin once
+
+https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once
+
+```python
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from app.managers import my_model_manager
+
+...
+
+    engine = create_async_engine(
+        "...",
+    )
+    # Start transaction with context manager
+    async with async_sessionmaker(engine) as session, session.begin():
+        # This call only flushes, no SQL COMMIT yet
+        created_obj = await my_model_manager.create(session, input_data)
+        # This call only flushes, no SQL COMMIT yet
+        await my_model_manager.update(session, created_obj, name="updated_name")
+    # Everything is SQL COMMITed, if no errors occured in nested block
+```
+
+## Создание и обновление объектов
+
+TODO...
+
 
 ## Расширение
 Методы `ModelManager` легко расширить дополнительной логикой.
