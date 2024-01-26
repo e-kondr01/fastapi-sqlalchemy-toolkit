@@ -697,7 +697,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         joined_query = base_query
         models_to_join = set()
 
-        if order_by:
+        if order_by is not None:
             if isinstance(order_by, InstrumentedAttribute):
                 ordering_model = order_by.parent.class_
             else:
