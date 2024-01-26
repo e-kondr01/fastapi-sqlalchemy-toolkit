@@ -18,8 +18,6 @@ class Settings(BaseSettings):
     POSTGRES_DB: str
     SQLALCHEMY_DATABASE_URL: str | None = None
 
-    SENTRY_DSN: str | None = None
-
     @field_validator("SQLALCHEMY_DATABASE_URL", mode="before")
     def assemble_db_connection_string(
         cls, value: PostgresDsn | None, info: FieldValidationInfo

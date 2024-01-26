@@ -15,7 +15,6 @@ from sqlalchemy.sql.functions import Function
 from sqlalchemy.sql.selectable import Exists
 
 from .filters import null_query_values
-from .ordering import OrderingField
 
 ModelT = TypeVar("ModelT", bound=DeclarativeBase)
 CreateSchemaT = TypeVar("CreateSchemaT", bound=BaseModel)
@@ -137,7 +136,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         options: List[Any] | Any | None = None,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
         **simple_filters: Any,
@@ -149,7 +148,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
@@ -174,7 +173,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         options: List[Any] | Any | None = None,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
         **simple_filters: Any,
@@ -186,7 +185,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
@@ -294,7 +293,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def paginated_filter(
         self,
         session: AsyncSession,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
@@ -306,7 +305,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param session: сессия SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
@@ -330,7 +329,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def paginated_list(
         self,
         session: AsyncSession,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
         nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
         | None = None,
@@ -346,7 +345,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param session: сессия SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param filter_expressions: словарь, отображающий поля для фильтрации
         на их значения. Фильтрация по None не применяется. См. раздел "фильтрация"
@@ -405,7 +404,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def filter(
         self,
         session: AsyncSession,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
@@ -417,7 +416,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param session: сессия SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
@@ -446,7 +445,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def list(
         self,
         session: AsyncSession,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
         nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
         | None = None,
@@ -462,7 +461,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param session: сессия SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param filter_expressions: словарь, отображающий поля для фильтрации
         на их значения. Фильтрация по None не применяется. См. раздел "фильтрация"
@@ -525,7 +524,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         options: List[Any] | Any | None = None,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         **simple_filters: Any,
     ) -> int:
@@ -536,7 +535,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
-        :param order_by: поле для сортировки (экземпляр OrderingField)
+        :param order_by: поле для сортировки
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
@@ -682,7 +681,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         base_query: Select,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any],
         options: List[Any] | None = None,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
     ) -> Select:
         """
         Делает необходимые join'ы при фильтрации и сортировке по полям
@@ -697,12 +696,16 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         joined_query = base_query
         models_to_join = set()
-        if (
-            order_by
-            and not isinstance(order_by.field, str)
-            and order_by.field.parent.class_ != self.model
-        ):
-            models_to_join.add(order_by.field.parent.class_)
+
+        if order_by:
+            if isinstance(order_by, InstrumentedAttribute):
+                ordering_model = order_by.parent.class_
+            else:
+                ordering_model = order_by._propagate_attrs[
+                    "plugin_subject"
+                ]._identity_class
+            if ordering_model != self.model:
+                models_to_join.add(ordering_model)
 
         for filter_expression in filter_expressions.keys():
             if isinstance(filter_expression, InstrumentedAttribute):
@@ -731,11 +734,13 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 options.append(contains_eager(self.models_to_relationship_attrs[model]))
         return joined_query
 
-    def get_order_by_expression(self, order_by: OrderingField | None):
+    def get_order_by_expression(
+        self, order_by: InstrumentedAttribute | UnaryExpression | None
+    ):
         if order_by is not None:
             if self.default_ordering is not None:
-                return order_by.get_directed_field(self.model), self.default_ordering
-            return order_by.get_directed_field(self.model)
+                return order_by, self.default_ordering
+            return order_by
         return self.default_ordering
 
     @staticmethod
@@ -783,7 +788,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def assemble_stmt(
         self,
         base_stmt: Select | None = None,
-        order_by: OrderingField | None = None,
+        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         **simple_filters: Any,
