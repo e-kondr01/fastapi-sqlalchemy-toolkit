@@ -128,7 +128,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.run_db_validation(session, in_obj=create_data)
         db_obj = self.model(**create_data)
         session.add(db_obj)
-        await self.persist(session, commit)
+        await self.save(session, commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
@@ -602,7 +602,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         for field in update_data:
             setattr(db_obj, field, update_data[field])
         session.add(db_obj)
-        await self.persist(session, commit)
+        await self.save(session, commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
@@ -622,7 +622,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :returns: переданный в функцию экземпляр модели
         """
         await session.delete(db_obj)
-        await self.persist(session, commit)
+        await self.save(session, commit)
         return db_obj
 
     ##################################################################################
@@ -630,7 +630,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     ##################################################################################
 
     @staticmethod
-    async def persist(session: AsyncSession, commit: bool = True) -> None:
+    async def save(session: AsyncSession, commit: bool = True) -> None:
         """
         Сохраняет изменения в БД, обрабатывая разное использовании сессии:
         "commit as you go" или "begin once".
