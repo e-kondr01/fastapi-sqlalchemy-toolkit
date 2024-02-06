@@ -331,8 +331,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
-        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
-        | None = None,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
@@ -447,8 +448,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
-        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
-        | None = None,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
@@ -523,8 +525,6 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def count(
         self,
         session: AsyncSession,
-        options: List[Any] | Any | None = None,
-        order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         **simple_filters: Any,
     ) -> int:
@@ -533,10 +533,6 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param session: сессия SQLAlchemy
 
-        :param options: параметры для метода .options() загрузчика SQLAlchemy
-
-        :param order_by: поле для сортировки
-
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
 
         :param simple_filters: параметры для фильтрации по точному соответствию,
@@ -544,15 +540,14 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: количество объектов по переданным фильтрам
         """
-        stmt = self.assemble_stmt(
-            select(func.count(self.model.id)),
-            order_by,
-            options,
-            where,
-            **simple_filters,
-        )
+        # TODO: reference primary key instead of hardcode model.id
+        stmt = select(func.count(self.model.id))
+        if where is not None:
+            stmt = stmt.where(where)
+        if simple_filters:
+            stmt = stmt.filter_by(**simple_filters)
         result = await session.execute(stmt)
-        return result.scalars().first() or 0
+        return result.scalar_one_or_none() or 0
 
     async def update(
         self,
