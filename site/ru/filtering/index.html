@@ -1,0 +1,952 @@
+
+<!doctype html>
+<html lang="ru" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../model_manager/">
+      
+      
+        <link rel="next" href="../sorting/">
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.8">
+    
+    
+      
+        <title>Фильтрация - FastAPI SQLAlchemy Toolkit</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.f2e4d321.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Перейти к содержанию
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Верхний колонтитул">
+    <a href="../" title="FastAPI SQLAlchemy Toolkit" class="md-header__button md-logo" aria-label="FastAPI SQLAlchemy Toolkit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            FastAPI SQLAlchemy Toolkit
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Фильтрация
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12c0-2.42-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12 20 8.69Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var media,input,key,value,palette=__md_get("__palette");if(palette&&palette.color){"(prefers-color-scheme)"===palette.color.media&&(media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']"),palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent"));for([key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Выберите язык">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04M18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12m-2.62 7 1.62-4.33L19.12 17h-3.24Z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="../../filtering/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="ru" class="md-select__link">
+              Русский
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit" title="Перейти к репозиторию" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    fastapi-sqlalchemy-toolkit
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Вкладки" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  Главная
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Навигация" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../" title="FastAPI SQLAlchemy Toolkit" class="md-nav__button md-logo" aria-label="FastAPI SQLAlchemy Toolkit" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg>
+
+    </a>
+    FastAPI SQLAlchemy Toolkit
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit" title="Перейти к репозиторию" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.5.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    fastapi-sqlalchemy-toolkit
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+    
+      
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
+            
+  
+  <span class="md-ellipsis">
+    Главная
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Главная
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Руководство пользователя
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../model_manager/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ModelManager
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Фильтрация
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Фильтрация
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Простая фильтрация по точному соответствию
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Более сложная фильтрация
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация без дополнительной обработки
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#null-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация по null через API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация по обратным связям
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Предпосылки
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sorting/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Сортировка
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extension/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Расширение
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Другие полезности
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      Простая фильтрация по точному соответствию
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Более сложная фильтрация
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация без дополнительной обработки
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#null-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация по null через API
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Фильтрация по обратным связям
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      Предпосылки
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+  <h1>Фильтрация</h1>
+
+<p>Для получения списка объектов с фильтрацией <code>fastapi_sqlalchemy_toolkit</code> предоставляет два метода:
+<code>list</code>, который осуществляет предобработку значений, и <code>filter</code>, который не производит дополнительных обработок.
+Аналогично ведут себя методы <code>paginated_list</code> и <code>paginated_filter</code>, за исключением того, что они пагинирует результат
+с помощью <code>fastapi_pagination</code>.</p>
+<p>Пусть имеются следующие модели:</p>
+<pre><code class="language-python">class Base(DeclarativeBase):
+    id: Mapped[_py_uuid] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+
+class Parent(Base):
+    title: Mapped[str]
+    slug: Mapped[str] = mapped_column(unique=True)
+    children: Mapped[list[&quot;Child&quot;]] = relationship(back_populates=&quot;parent&quot;)
+
+
+class Child(Base):
+    title: Mapped[str]
+    slug: Mapped[str] = mapped_column(unique=True)
+    parent_id: Mapped[UUID] = mapped_column(ForeignKey(&quot;parent.id&quot;, ondelete=&quot;CASCADE&quot;))
+    parent: Mapped[Parent] = relationship(back_populates=&quot;children&quot;)
+</code></pre>
+<p>И менеджер:</p>
+<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ModelManager
+
+child_manager = ModelManager[Child, CreateChildSchema, PatchChildSchema](
+    Child, default_ordering=Child.title
+)
+</code></pre>
+<h3 id="_1">Простая фильтрация по точному соответствию</h3>
+<pre><code class="language-python">@router.get(&quot;/children&quot;)
+async def get_list(
+    session: Session,
+    slug: str | None = None,
+) -&gt; list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        slug=slug,
+    )
+</code></pre>
+<p>Запрос <code>GET /children</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child
+</code></pre>
+<p>Запрос <code>GET /children?slug=child-1</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE child.slug = :slug_1
+</code></pre>
+<p>По конвенции <code>FastAPI</code>, необязательные параметры запроса типизируются как <code>slug: str | None = None</code>.
+При этом клиенты API обычно ожидают, что при запросе <code>GET /children</code> будут возвращены все объекты <code>Child</code>,
+а не только те, у которых <code>slug is null</code>. Поэтому метод <code>list</code> (<code>paginated_list</code>) отбрасывает фильтрацию
+по этому параметру, если его значение не передано.</p>
+<h3 id="_2">Более сложная фильтрация</h3>
+<p>Чтобы использовать фильтрацию не только по точному соответствию атрибуту модели,
+в методах <code>list</code> и <code>paginated_list</code> можно передать параметр <code>filter_expressions</code>.</p>
+<p>Параметр <code>filter_expressions</code> принимает словарь, в котором ключи могут быть:</p>
+<ol>
+<li>
+<p>Атрибутами основной модели (<code>Child.title</code>) </p>
+</li>
+<li>
+<p>Операторами атрибутов модели (<code>Child.title.ilike</code>)</p>
+</li>
+<li>
+<p>Функциями <code>sqlalchemy</code> над атрибутами модели (<code>func.date(Child.created_at)</code>)</p>
+</li>
+<li>
+<p>Атрибутами связанной модели (<code>Parent.title</code>). Работает в том случае, если
+это модель, напрямую связанная с основной, а также если модели связывает только один внешний ключ.</p>
+</li>
+</ol>
+<p>Значение по ключу в словаре <code>filter_expressions</code> -- это значение,
+по которому должна осуществляться фильтрация.</p>
+<p>Пример фильтрации по <strong>оператору</strong> атрибута модели:</p>
+<pre><code class="language-python">@router.get(&quot;/children&quot;)
+async def get_list(
+    session: Session,
+    title: str | None = None,
+) -&gt; list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Child.title.ilike: title
+        },
+    )
+</code></pre>
+<p>Запрос <code>GET /children</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child
+</code></pre>
+<p>Запрос <code>GET /children?title=ch</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE lower(child.title) LIKE lower(:title_1)
+</code></pre>
+<p>Пример фильтрации по <strong>функции <code>sqlalchemy</code></strong> над атрибутом модели:</p>
+<pre><code class="language-python">@router.get(&quot;/children&quot;)
+async def get_list(
+    session: Session,
+    created_at_date: date | None = None,
+) -&gt; list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            func.date(Child.created_at): created_at_date
+        },
+    )
+</code></pre>
+<p>Запрос <code>GET /children?created_at_date=2023-11-19</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT child.title, child.slug, child.parent_id, child.id, child.created_at 
+FROM child 
+WHERE date(child.created_at) = :date_1
+</code></pre>
+<p>Пример фильтрации по атрибуту связанной модели:</p>
+<pre><code class="language-python">@router.get(&quot;/children&quot;)
+async def get_list(
+    session: Session,
+    parent_title: str | None = None,
+) -&gt; list[ChildListSchema]:
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Parent.title.ilike: title
+        },
+    )
+</code></pre>
+<p>Запрос <code>GET /children?parent_title=ch</code> сгенерирует следующий SQL:</p>
+<pre><code class="language-SQL">SELECT parent.title, parent.slug, parent.id, parent.created_at, 
+child.title AS title_1, child.slug AS slug_1, child.parent_id, child.id AS id_1,
+child.created_at AS created_at_1 
+FROM child LEFT OUTER JOIN parent ON parent.id = child.parent_id 
+WHERE lower(parent.title) LIKE lower(:title_1)
+</code></pre>
+<p>При фильтрации по полям связанных моделей через параметр <code>filter_expression</code>,
+ необходимые для фильтрации <code>join</code> будут сделаны автоматически.
+<strong>Важно</strong>: работает только для моделей, напрямую связанных с основной, и только тогда, когда
+эти модели связывает единственный внешний ключ.</p>
+<h3 id="_3">Фильтрация без дополнительной обработки</h3>
+<p>Для фильтрации без дополнительной обработки в методах <code>list</code> и <code>paginated_list</code> можно
+использовать параметр <code>where</code>. Значение этого параметра будет напрямую
+передано в метод <code>.where()</code> экземпляра <code>Select</code> в выражении запроса <code>SQLAlchemy</code>.</p>
+<pre><code class="language-python">    non_archived_items = await item_manager.list(session, where=(Item.archived_at == None))
+</code></pre>
+<p>Использовать параметр <code>where</code> методов <code>list</code> и <code>paginated_list</code> имеет смысл тогда,
+когда эти методы используются в списочном API эндпоинте и предобработка части параметров
+запроса полезна, однако нужно также добавить фильтр без предобработок от <code>fastapi_sqlalchemy_toolkit</code>.</p>
+<p>В том случае, когда предобработки <code>fastapi_sqlalchemy_toolkit</code> не нужны вообще, стоит использовать методы
+<code>filter</code> и <code>paginated_filter</code>:</p>
+<pre><code class="language-python">    created_at = None
+
+    items = await item_manager.filter(session, created_at=created_at)
+</code></pre>
+<pre><code class="language-SQL">SELECT item.id, item.name, item.created_at
+FROM item
+WHERE itme.created is null
+</code></pre>
+<p>В отличие от метода <code>list</code>, метод <code>filter</code>:</p>
+<ol>
+<li>
+<p>Не игнорирует простые фильтры (<code>kwargs</code>) со значением <code>None</code></p>
+</li>
+<li>
+<p>Не имеет параметра <code>filter_expressions</code>, т. е. не будет выполнять <code>join</code>,
+необходимые для фильтрации по полям связанных моделей.</p>
+</li>
+</ol>
+<h3 id="null-api">Фильтрация по <code>null</code> через API</h3>
+<p>Если в списочном эндпоинте API требуется, чтобы можно было как отфильтровать значение поля
+по переданному значению, так и отфильтровать его по <code>null</code>, предлагается использовать параметр
+<code>nullable_filter_expressions</code> методов <code>list</code> (<code>paginated_list</code>):</p>
+<pre><code class="language-python">from datetime import datetime
+
+from fastapi_sqlalchemy_toolkit import NullableQuery
+
+from app.managers import my_object_manager
+from app.models import MyObject
+
+@router.get(&quot;/my-objects&quot;)
+async def get_my_objects(
+    session: Session,
+    deleted_at: datetime | NullableQuery | None = None
+) -&gt; list[MyObjectListSchema]:
+    return await my_object_manager.list(
+        session,
+        nullable_filter_expressions={
+            MyObject.deleted_at: deleted_at
+        }
+    )
+</code></pre>
+<p>Параметру с поддержкой фильтрации по <code>null</code> нужно указать возможный тип
+<code>fastapi_sqlalchemy_toolkit.NullableQuery</code>.</p>
+<p>Теперь при запросе <code>GET /my-objects?deleted_at=</code> или <code>GET /my-objects?deleted_at=null</code>
+вернутся объекты <code>MyObject</code>, у которых <code>deleted_at IS NULL</code>.</p>
+<h3 id="_4">Фильтрация по обратным связям</h3>
+<p>Также в методах получения списков есть поддержка фильтрации
+по обратным связям (<code>relationship()</code> в направлении один ко многим) с использованием метода <code>.any()</code>.</p>
+<pre><code class="language-python"># Если ParentModel.children -- это связь один ко многим
+await parent_manager.list(session, children=[1, 2])
+# Вернёт объекты Parent, у которых есть связь с ChildModel с id 1 или 2
+</code></pre>
+<h3 id="_5">Предпосылки</h3>
+<p>Необязательный раздел с демо сокращения количества шаблонного кода при использовании <code>fastapi_sqlalchemy_toolkit</code>.</p>
+<p>Если в эндпоинт <code>FastAPI</code> нужно добавить фильтры по значениям полей, то код будет выглядеть примерно так:</p>
+<pre><code class="language-python">from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.deps import get_async_session
+from app.models import MyModel, MyParentModel
+from app.schemas import MyObjectListSchema
+
+router = APIRouter()
+Session = Annotated[AsyncSession, Depends(get_async_session)]
+
+
+@router.get(&quot;/my-objects&quot;)
+async def get_my_objects(
+    session: Session,
+    user_id: UUID | None = None,
+    name: str | None = None,
+    parent_name: str | None = None,
+) -&gt; list[MyObjectListSchema]:
+    stmt = select(MyModel)
+    if user_id is not None:
+        stmt = stmt.filter_by(user_id=user_id)
+    if name is not None:
+        stmt = stmt.filter(MyModel.name.ilike == f&quot;%{name}%&quot;)
+    if parent_name is not None:
+        stmt = stmt.join(MyModel.parent)
+        stmt = stmt.filter(ParentModel.name.ilike == f&quot;%{parent_name}%&quot;)
+    result = await session.execute(stmt)
+    return result.scalars().all()
+</code></pre>
+<p>Как можно заметить, для реализации фильтрации необходима дубликация шаблонного кода.</p>
+<p>В <code>fastapi-sqlalchemy-toolkit</code> этот эндпоинт выглядит так:</p>
+<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import FieldFilter
+
+from app.managers import my_object_manager
+
+@router.get(&quot;/my-objects&quot;)
+async def get_my_objects(
+    session: Session,
+    user_id: UUID | None = None,
+    name: str | None = None,
+    parent_name: str | None = None,
+) -&gt; list[MyObjectListSchema]:
+    return await my_object_manager.list(
+        session,
+        user_id=user_id,
+        filter_expressions={
+            MyObject.name: name,
+            MyObjectParent.name: parent_name
+        }
+    )
+</code></pre>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  К началу
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+      <div class="md-progress" data-md-component="progress" role="progressbar"></div>
+    
+    
+    <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.instant.progress", "navigation.path", "navigation.tracking", "navigation.tabs", "navigation.top"], "search": "../../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.8fd75fb4.min.js"></script>
+      
+    
+  </body>
+</html>

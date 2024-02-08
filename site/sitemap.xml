@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+    <url>
+        <loc>None./</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="None"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/"/>
+    </url>
+    <url>
+        <loc>Noneextension/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Noneextension/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/extension/"/>
+    </url>
+    <url>
+        <loc>Nonefeatures/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonefeatures/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/features/"/>
+    </url>
+    <url>
+        <loc>Nonefiltering/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonefiltering/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/filtering/"/>
+    </url>
+    <url>
+        <loc>Nonemodel_manager/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonemodel_manager/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/model_manager/"/>
+    </url>
+    <url>
+        <loc>Nonesorting/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonesorting/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/sorting/"/>
+    </url>
+    <url>
+        <loc>Noneru/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="None"/>
+    </url>
+    <url>
+        <loc>Noneru/extension/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/extension/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Noneextension/"/>
+    </url>
+    <url>
+        <loc>Noneru/features/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/features/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonefeatures/"/>
+    </url>
+    <url>
+        <loc>Noneru/filtering/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/filtering/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonefiltering/"/>
+    </url>
+    <url>
+        <loc>Noneru/model_manager/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/model_manager/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonemodel_manager/"/>
+    </url>
+    <url>
+        <loc>Noneru/sorting/</loc>
+        <lastmod>2024-02-08</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="Noneru/sorting/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="Nonesorting/"/>
+    </url>
+</urlset>
