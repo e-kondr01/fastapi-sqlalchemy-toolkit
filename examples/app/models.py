@@ -1,7 +1,5 @@
 from datetime import datetime
-from uuid import UUID
-from uuid import UUID as _py_uuid
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime, ForeignKey, func
 from sqlalchemy.orm import (
@@ -14,8 +12,10 @@ from sqlalchemy.orm import (
 
 
 class Base(DeclarativeBase):
-    id: Mapped[_py_uuid] = mapped_column(
-        UUID(as_uuid=True), primary_key=True, default=uuid4
+    id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid4,
+        server_default=func.gen_random_uuid(),
     )
 
     created_at: Mapped[datetime] = mapped_column(

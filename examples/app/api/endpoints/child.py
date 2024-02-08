@@ -1,8 +1,7 @@
 from datetime import date
-from typing import Annotated
 from uuid import UUID
 
-from app.deps import get_async_session
+from app.api.deps import Session
 from app.managers import child_manager
 from app.models import Child, Parent
 from app.schemas import (
@@ -12,27 +11,28 @@ from app.schemas import (
     HTTPErrorSchema,
     PatchChildSchema,
 )
-from fastapi import APIRouter, Depends, Response, status
-from fastapi_pagination import Page, Params
+from fastapi import APIRouter, Response, status
+from fastapi_pagination import Page
 from sqlalchemy import func
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from fastapi_sqlalchemy_toolkit import ordering_dep
+from fastapi_sqlalchemy_toolkit import ordering_depends
 
 router = APIRouter()
 
-Session = Annotated[AsyncSession, Depends(get_async_session)]
-PaginationParams = Annotated[Params, Depends()]
 
-children_ordering_fields = (Parent.created_at, Parent.title, "created_at", "title")
+children_ordering_fields = {
+    "title": Child.title,
+    "created_at": Child.created_at,
+    "parent_title": Parent.title,
+    "parent_created_at": Parent.created_at,
+}
 
 
 @router.get("")
 async def get_list(
     session: Session,
-    order_by: ordering_dep(children_ordering_fields),
-    pagination_params: PaginationParams,
+    order_by: ordering_depends(children_ordering_fields),
     title: str | None = None,
     slug: str | None = None,
     parent_title: str | None = None,
@@ -42,7 +42,6 @@ async def get_list(
     return await child_manager.paginated_list(
         # Обязательные параметры
         session,
-        pagination_params,
         # Фильтры
         slug=slug,
         filter_expressions={
