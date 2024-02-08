@@ -320,3 +320,261 @@ async def get_my_objects(
         }
     )
 ```
+<<<<<<< HEAD:docs/ru/filtering.md
+=======
+
+## Сортировка
+
+`fastapi-sqlalchemy-toolkit` поддеживает декларативную сортировку по полям модели, 
+а также по полям связанных моделей (если это модель, напрямую связанная с основной,
+а также эти модели связывает единственный внешний ключ). При этом необходимые для сортировки по полям
+связанных моделей join'ы будут сделаны автоматически.
+
+Для применения декларативной сортировки нужно:
+1. Определить поля, по которым доступна фильтрация.
+
+Это может быть либо списком/кортежем полей основной модели:
+
+```python
+from app.models import Child
+
+child_ordering_fields = (
+    Child.title,
+    Child.created_at
+)
+```
+
+В таком случае, будут доступны следующий параметря для сортировки:
+`title`, `-title`, `created_at`, `-created_at`.
+
+Дефис первым символом означает направление сортировки по убыванию.
+
+Либо можно определить маппинг строковых полей для сортировки
+на соответствующие поля моделей:
+
+```python
+from app.models import Child, Parent
+
+child_ordering_fields = (
+    "title": MyModel.title,
+    "parent_title": ParentModel.title
+)
+```
+
+В таком случае, будут доступны следующий параметря для сортировки:
+`title`, `-title`, `parent_title`, `-parent_title`.
+
+2. В параметрах энпдоинта передать определённый выше список
+в `ordering_depends`
+
+```python
+from fastapi_sqlalchemy_toolkit import ordering_depends
+
+@router.get("/children")
+async def get_child_objects(
+    session: Session,
+    order_by: ordering_depends(child_ordering_fields)
+) -> list[ChildListSchema]
+    ...
+```
+
+3. Передать параметр сортировки как параметр `order_by` в методы `ModelManager`
+
+```python
+    return await child_manager.list(session=session, order_by=order_by)
+```
+
+Если `order_by` передаётся в методы `list` или `paginated_list`,
+и поле для сортировки относится к модели, напрямую связанную с основной,
+то будет выполнен необходимый `join` для применения сортировки.
+
+## Транзакции
+
+`fastapi-sqlalchemy-toolkit` поддерживает оба подхода к работе с транзакциями `SQAlchemy`.
+
+### Commit as you go
+
+https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go
+
+```python
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from app.managers import my_model_manager
+
+...
+
+    engine = create_async_engine(
+        "...",
+    )
+    async with async_sessionmaker(engine) as session:
+        # This call produces SQL COMMIT
+        created_obj = await my_model_manager.create(session, input_data)
+        # This call does not produce SQL COMMIT
+        await my_model_manager.update(session, created_obj, name="updated_name", commit=False)
+    # Only 1st statement is persisted
+```
+
+### Begin once
+
+https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once
+
+```python
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from app.managers import my_model_manager
+
+...
+
+    engine = create_async_engine(
+        "...",
+    )
+    # Start transaction with context manager
+    async with async_sessionmaker(engine) as session, session.begin():
+        # This call only flushes, no SQL COMMIT yet
+        created_obj = await my_model_manager.create(session, input_data)
+        # This call only flushes, no SQL COMMIT yet
+        await my_model_manager.update(session, created_obj, name="updated_name")
+    # Everything is SQL COMMITed, if no errors occured in nested block
+```
+
+## Создание и обновление объектов
+
+TODO...
+
+
+## Расширение
+Методы `ModelManager` легко расширить дополнительной логикой.
+
+
+В первую очередь необходимо определить свой класс ModelManager:
+
+```python
+from fastapi_sqlalchemy_toolkit import ModelManager
+
+
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
+    ...
+```
+### Дополнительная валидация
+Дополнительную валидацию можно добавить, переопределив метод `validate`:
+
+```python
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
+    async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -> None:
+        """
+        Проверяет тип выбранного объекта Parent
+        """
+        # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
+        parent = await parent_manager.get(session, id=in_obj["parent_id"])
+        if parent.type != ParentTypes.CanHaveChildren:
+            raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="This parent has incompatible type",
+                )
+    
+    async def run_db_validation(
+            self,
+            session: AsyncSession,
+            db_obj: MyModel | None = None,
+            in_obj: ModelDict | None = None,
+        ) -> ModelDict:
+        validated_data = await super().validate(session, db_obj, in_obj)
+        await self.validate_parent_type(session, validated_data)
+        return validated_data
+```
+
+### Дополнительная бизнес логика при CRUD операциях
+Если при CRUD операциях с моделью необходимо выполнить какую-то дополнительную бизнес логику,
+это можно сделать, переопределив соответствующие методы ModelManager:
+
+```python
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
+    async def create(
+        self, *args, background_tasks: BackgroundTasks | None = None, **kwargs
+    ) -> MyModel:
+    created = await super().create(*args, **kwargs)
+    background_tasks.add_task(send_email, created.id)
+    return created
+```
+
+Такой подход соответствует принципу "Fat Models, Skinny Views" из Django.
+
+### Использование декларативных фильтров в нестандартных списочных запросах
+Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
+или агрегации, но также необходима декларативная фильтрация, то можно новый свой метод менеджера,
+вызвав в нём метод `super().get_filter_expression`:
+```python
+class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
+    async def get_parents_with_children_count(
+        self, session: AsyncSession, **kwargs
+    ) -> list[RetrieveParentWithChildrenCountSchema]:
+        children_count_query = (
+            select(func.count(Child.id))
+            .filter(Child.parent_id == Parent.id)
+            .scalar_subquery()
+        )
+        query = (
+            select(Parent, children_count_query.label("children_count"))
+        )
+
+        # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
+        # list и paginated_list
+        query = query.filter(self.get_filter_expression(**kwargs))
+
+        result = await session.execute(query)
+        result = result.unique().all()
+        for i, row in enumerate(result):
+            row.Parent.children_count = row.children_count
+            result[i] = row.Parent
+        return result
+```
+
+## Другие полезности
+### Сохранение пользователя запроса
+
+Пользователя запроса можно задать в создаваемом/обновляемом объекте,
+передав дополнительный параметр в метод `create` (`update`):
+```python
+@router.post("")
+async def create_child(
+    child_in: CreateUpdateChildSchema, session: Session, user: CurrentUser
+) -> CreateUpdateChildSchema:
+    return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
+```
+
+### Создание и обновление объектов с M2M связями
+Если на модели определена M2M связь, то использование `ModelManager` позволяет передать в это поле список ID объектов.
+
+`fastapi-sqlalchemy-toolkit` провалидирует существование этих объектов и установит им M2M связь,
+без необходимости создавать отдельные эндпоинты для работы с M2M связями.
+
+```python
+# Пусть модели Person и House имеют M2M связь
+from pydantic import BaseModel
+
+
+class PersonCreateSchema(BaseModel):
+    house_ids: list[int]
+
+...
+
+    in_obj = PersonCreateSchema(house_ids=[1, 2, 3])
+    await person_manager.create(session, in_obj)
+    # Создаст объект Person и установит ему M2M связь с House с id 1, 2 и 3
+```
+
+### Фильтрация по списку значений
+Один из способов фильтрации по списку значений -- передать этот список в качестве
+квери параметра в строку через запятую.
+`fastapi-sqlalchemy-toolkit` предоставляет утилиту для фильтрации по списку значений, переданного в строку через запятую:
+```python
+from uuid import UUID
+from fastapi_sqlalchemy_toolkit.utils import CommaSepQuery, comma_sep_q_to_list
+
+@router.get("/children")
+async def get_child_objects(
+    session: Session,
+    ids: CommaSepQuery = None,
+) -> list[ChildListSchema]
+    ids = comma_sep_q_to_list(ids, UUID)
+    return await child_manager.list(session, filter_expressions={Child.id.in_: ids})
+```
+>>>>>>> c768257cf8d5a8f02e52b2973c53e9a5fa757caf:README.md
