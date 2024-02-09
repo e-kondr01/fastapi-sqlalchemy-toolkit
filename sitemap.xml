@@ -36,13 +36,6 @@
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/filtering/"/>
     </url>
     <url>
-        <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/model_manager/</loc>
-        <lastmod>2024-02-09</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/model_manager/"/>
-        <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/model_manager/"/>
-    </url>
-    <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/sorting/</loc>
         <lastmod>2024-02-09</lastmod>
         <changefreq>daily</changefreq>
@@ -55,6 +48,13 @@
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/transactions/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/transactions/"/>
+    </url>
+    <url>
+        <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/</loc>
+        <lastmod>2024-02-09</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/"/>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/utils/</loc>
@@ -99,13 +99,6 @@
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/filtering/"/>
     </url>
     <url>
-        <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/model_manager/</loc>
-        <lastmod>2024-02-09</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/model_manager/"/>
-        <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/model_manager/"/>
-    </url>
-    <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/sorting/</loc>
         <lastmod>2024-02-09</lastmod>
         <changefreq>daily</changefreq>
@@ -120,16 +113,17 @@
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/transactions/"/>
     </url>
     <url>
+        <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/</loc>
+        <lastmod>2024-02-09</lastmod>
+        <changefreq>daily</changefreq>
+        <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/"/>
+        <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/"/>
+    </url>
+    <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/</loc>
         <lastmod>2024-02-09</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/utils/"/>
-    </url>
-    <url>
-        <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/</loc>
-        <lastmod>2024-02-09</lastmod>
-        <changefreq>daily</changefreq>
-        <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/"/>
     </url>
 </urlset>
