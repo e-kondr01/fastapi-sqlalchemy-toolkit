@@ -8,3 +8,5 @@ black
 isort
 pylint
 mypy
+pytest
+asyncpg

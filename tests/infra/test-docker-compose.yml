@@ -1,0 +1,18 @@
+version: "3.8"
+name: toolkit-test
+
+services:
+  postgres:
+    image: postgres:15.2
+    expose:
+      - "5430:5432"
+    environment:
+      - POSTGRES_DB=toolkit-test
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    networks:
+      - toolkit-test
+
+networks:
+  toolkit-test:
+    name: toolkit-test
