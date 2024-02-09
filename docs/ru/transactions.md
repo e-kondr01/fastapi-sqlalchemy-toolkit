@@ -25,7 +25,7 @@ from app.managers import my_model_manager
 
 ## Begin once
 
-[Докумнетация Begin once SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once)
+[Документация Begin once SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once)
 
 ```python
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine

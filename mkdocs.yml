@@ -76,6 +76,4 @@ theme:
     - toc:
       permalink: true
     - admonition
-    - attr_list
     - tables
-    - def_list
