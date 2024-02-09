@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/extension/">
+        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/db_validation/">
       
       
-        <link rel="prev" href="../db_validation/">
+        <link rel="prev" href="../transactions/">
       
       
-        <link rel="next" href="../utils/">
+        <link rel="next" href="../extension/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Расширение - FastAPI SQLAlchemy Toolkit</title>
+        <title>Валидация на уровне БД - FastAPI SQLAlchemy Toolkit</title>
       
     
     
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Расширение
+              Валидация на уровне БД
             
           </span>
         </div>
@@ -157,7 +157,7 @@
       <ul class="md-select__list">
         
           <li class="md-select__item">
-            <a href="../../extension/" hreflang="en" class="md-select__link">
+            <a href="../../db_validation/" hreflang="en" class="md-select__link">
               English
             </a>
           </li>
@@ -425,27 +425,6 @@
                 
   
   
-  
-  
-    <li class="md-nav__item">
-      <a href="../db_validation/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Валидация на уровне БД
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
     
   
   
@@ -458,18 +437,29 @@
         
       
       
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
   
   <span class="md-ellipsis">
-    Расширение
+    Валидация на уровне БД
   </span>
   
 
-          <span class="md-nav__icon md-icon"></span>
-        </label>
+      </a>
       
-      <a href="./" class="md-nav__link md-nav__link--active">
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../extension/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -478,53 +468,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Содержание">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Содержание
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Дополнительная валидация
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#crud" class="md-nav__link">
-    <span class="md-ellipsis">
-      Дополнительная бизнес логика при CRUD операциях
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Использование декларативных фильтров в нестандартных списочных запросах
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -599,41 +542,6 @@
     
   
   
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Содержание
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
-    <span class="md-ellipsis">
-      Дополнительная валидация
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#crud" class="md-nav__link">
-    <span class="md-ellipsis">
-      Дополнительная бизнес логика при CRUD операциях
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
-    <span class="md-ellipsis">
-      Использование декларативных фильтров в нестандартных списочных запросах
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
 </nav>
                   </div>
                 </div>
@@ -650,79 +558,7 @@
   
 
 
-<h1 id="_1">Расширение</h1>
-<p>Методы <code>ModelManager</code> легко расширить дополнительной логикой.</p>
-<p>В первую очередь необходимо определить свой класс ModelManager:</p>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ModelManager
-
-
-class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    ...
-</code></pre>
-<h2 id="_2">Дополнительная валидация</h2>
-<p>Дополнительную валидацию можно добавить, переопределив метод <code>run_db_valiation</code>:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -&gt; None:
-        &quot;&quot;&quot;
-        Проверяет тип выбранного объекта Parent
-        &quot;&quot;&quot;
-        # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
-        parent = await parent_manager.get(session, id=in_obj[&quot;parent_id&quot;])
-        if parent.type != ParentTypes.CanHaveChildren:
-            raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=&quot;This parent has incompatible type&quot;,
-                )
-
-    async def run_db_validation(
-            self,
-            session: AsyncSession,
-            db_obj: MyModel | None = None,
-            in_obj: ModelDict | None = None,
-        ) -&gt; ModelDict:
-        validated_data = await super().validate(session, db_obj, in_obj)
-        await self.validate_parent_type(session, validated_data)
-        return validated_data
-</code></pre>
-<h2 id="crud">Дополнительная бизнес логика при CRUD операциях</h2>
-<p>Если при CRUD операциях с моделью необходимо выполнить какую-то дополнительную бизнес логику,
-это можно сделать, переопределив соответствующие методы ModelManager:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    async def create(
-        self, *args, background_tasks: BackgroundTasks | None = None, **kwargs
-    ) -&gt; MyModel:
-    created = await super().create(*args, **kwargs)
-    background_tasks.add_task(send_email, created.id)
-    return created
-</code></pre>
-<h2 id="_3">Использование декларативных фильтров в нестандартных списочных запросах</h2>
-<p>Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
-или агрегации, но также необходима декларативная фильтрация, то можно определить метод менеджера,
-вызвав в нём метод <code>assemble_stmt</code>:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
-    async def get_parents_with_children_count(
-        self, session: AsyncSession, **kwargs
-    ) -&gt; list[RetrieveParentWithChildrenCountSchema]:
-        children_count_stmt = (
-            select(func.count(Child.id))
-            .filter(Child.parent_id == Parent.id)
-            .scalar_subquery()
-        )
-        stmt = (
-            select(Parent, children_count_query.label(&quot;children_count&quot;))
-        )
-
-        # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
-        # list и paginated_list
-        stmt = self.assemble_stmt(stmt, **kwargs)
-
-        result = await session.execute(query)
-        result = result.unique().all()
-        for i, row in enumerate(result):
-            row.Parent.children_count = row.children_count
-            result[i] = row.Parent
-        return result
-</code></pre>
+<h1 id="_1">Валидация на уровне базы данных</h1>
 
 
 

@@ -8,13 +8,13 @@
       
       
       
-        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/extension/">
+        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/">
       
       
-        <link rel="prev" href="../db_validation/">
+        <link rel="prev" href="../extension/">
       
       
-        <link rel="next" href="../utils/">
+        <link rel="next" href="../benefits/">
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
@@ -22,7 +22,7 @@
     
     
       
-        <title>Расширение - FastAPI SQLAlchemy Toolkit</title>
+        <title>Утилиты - FastAPI SQLAlchemy Toolkit</title>
       
     
     
@@ -110,7 +110,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Расширение
+              Утилиты
             
           </span>
         </div>
@@ -157,7 +157,7 @@
       <ul class="md-select__list">
         
           <li class="md-select__item">
-            <a href="../../extension/" hreflang="en" class="md-select__link">
+            <a href="../../utils/" hreflang="en" class="md-select__link">
               English
             </a>
           </li>
@@ -446,6 +446,27 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../extension/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Расширение
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -462,7 +483,7 @@
           
   
   <span class="md-ellipsis">
-    Расширение
+    Утилиты
   </span>
   
 
@@ -473,7 +494,7 @@
         
   
   <span class="md-ellipsis">
-    Расширение
+    Утилиты
   </span>
   
 
@@ -497,16 +518,16 @@
         <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
-      Дополнительная валидация
+      Сохранение пользователя запроса
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#crud" class="md-nav__link">
+  <a href="#m2m" class="md-nav__link">
     <span class="md-ellipsis">
-      Дополнительная бизнес логика при CRUD операциях
+      Создание и обновление объектов с M2M связями
     </span>
   </a>
   
@@ -515,7 +536,7 @@
         <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
-      Использование декларативных фильтров в нестандартных списочных запросах
+      Фильтрация по списку значений
     </span>
   </a>
   
@@ -525,27 +546,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../utils/" class="md-nav__link">
-        
-  
-  <span class="md-ellipsis">
-    Утилиты
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -608,16 +608,16 @@
         <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
-      Дополнительная валидация
+      Сохранение пользователя запроса
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#crud" class="md-nav__link">
+  <a href="#m2m" class="md-nav__link">
     <span class="md-ellipsis">
-      Дополнительная бизнес логика при CRUD операциях
+      Создание и обновление объектов с M2M связями
     </span>
   </a>
   
@@ -626,7 +626,7 @@
         <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
-      Использование декларативных фильтров в нестандартных списочных запросах
+      Фильтрация по списку значений
     </span>
   </a>
   
@@ -650,78 +650,47 @@
   
 
 
-<h1 id="_1">Расширение</h1>
-<p>Методы <code>ModelManager</code> легко расширить дополнительной логикой.</p>
-<p>В первую очередь необходимо определить свой класс ModelManager:</p>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ModelManager
-
-
-class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    ...
+<h1 id="_1">Другие утилиты</h1>
+<h2 id="_2">Сохранение пользователя запроса</h2>
+<p>Пользователя запроса можно задать в создаваемом/обновляемом объекте,
+передав дополнительный параметр в метод <code>create</code> (<code>update</code>):</p>
+<pre><code class="language-python">@router.post(&quot;&quot;)
+async def create_child(
+    child_in: CreateUpdateChildSchema, session: Session, user: User
+) -&gt; CreateUpdateChildSchema:
+    return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
 </code></pre>
-<h2 id="_2">Дополнительная валидация</h2>
-<p>Дополнительную валидацию можно добавить, переопределив метод <code>run_db_valiation</code>:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    async def validate_parent_type(self, session: AsyncSession, validated_data: ModelDict) -&gt; None:
-        &quot;&quot;&quot;
-        Проверяет тип выбранного объекта Parent
-        &quot;&quot;&quot;
-        # объект Parent с таким ID точно есть, так как это проверяется ранее в super().validate
-        parent = await parent_manager.get(session, id=in_obj[&quot;parent_id&quot;])
-        if parent.type != ParentTypes.CanHaveChildren:
-            raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=&quot;This parent has incompatible type&quot;,
-                )
+<h2 id="m2m">Создание и обновление объектов с M2M связями</h2>
+<p>Если на модели определена M2M связь, то использование <code>ModelManager</code> позволяет передать в это поле список ID объектов.</p>
+<p><code>fastapi-sqlalchemy-toolkit</code> провалидирует существование этих объектов и установит им M2M связь,
+без необходимости создавать отдельные эндпоинты для работы с M2M связями.</p>
+<pre><code class="language-python"># Пусть модели Person и House имеют M2M связь
+from pydantic import BaseModel
 
-    async def run_db_validation(
-            self,
-            session: AsyncSession,
-            db_obj: MyModel | None = None,
-            in_obj: ModelDict | None = None,
-        ) -&gt; ModelDict:
-        validated_data = await super().validate(session, db_obj, in_obj)
-        await self.validate_parent_type(session, validated_data)
-        return validated_data
+
+class PersonCreateSchema(BaseModel):
+    house_ids: list[int]
+
+...
+
+    in_obj = PersonCreateSchema(house_ids=[1, 2, 3])
+    await person_manager.create(session, in_obj)
+    # Создаст объект Person и установит ему M2M связь с House с id 1, 2 и 3
 </code></pre>
-<h2 id="crud">Дополнительная бизнес логика при CRUD операциях</h2>
-<p>Если при CRUD операциях с моделью необходимо выполнить какую-то дополнительную бизнес логику,
-это можно сделать, переопределив соответствующие методы ModelManager:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
-    async def create(
-        self, *args, background_tasks: BackgroundTasks | None = None, **kwargs
-    ) -&gt; MyModel:
-    created = await super().create(*args, **kwargs)
-    background_tasks.add_task(send_email, created.id)
-    return created
-</code></pre>
-<h2 id="_3">Использование декларативных фильтров в нестандартных списочных запросах</h2>
-<p>Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
-или агрегации, но также необходима декларативная фильтрация, то можно определить метод менеджера,
-вызвав в нём метод <code>assemble_stmt</code>:</p>
-<pre><code class="language-python">class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
-    async def get_parents_with_children_count(
-        self, session: AsyncSession, **kwargs
-    ) -&gt; list[RetrieveParentWithChildrenCountSchema]:
-        children_count_stmt = (
-            select(func.count(Child.id))
-            .filter(Child.parent_id == Parent.id)
-            .scalar_subquery()
-        )
-        stmt = (
-            select(Parent, children_count_query.label(&quot;children_count&quot;))
-        )
+<h2 id="_3">Фильтрация по списку значений</h2>
+<p>Один из способов фильтрации по списку значений -- передать этот список в качестве
+квери параметра в строку через запятую.
+<code>fastapi-sqlalchemy-toolkit</code> предоставляет утилиту для фильтрации по списку значений, переданного в строку через запятую:</p>
+<pre><code class="language-python">from uuid import UUID
+from fastapi_sqlalchemy_toolkit.utils import comma_list_query, get_comma_list_values
 
-        # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
-        # list и paginated_list
-        stmt = self.assemble_stmt(stmt, **kwargs)
-
-        result = await session.execute(query)
-        result = result.unique().all()
-        for i, row in enumerate(result):
-            row.Parent.children_count = row.children_count
-            result[i] = row.Parent
-        return result
+@router.get(&quot;/children&quot;)
+async def get_child_objects(
+    session: Session,
+    ids: comma_list_query = None,
+) -&gt; list[ChildListSchema]
+    ids = get_comma_list_values(ids, UUID)
+    return await child_manager.list(session, id=FieldFilter(ids, operator=&quot;in_&quot;))
 </code></pre>
 
 

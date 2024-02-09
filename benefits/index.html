@@ -8,10 +8,10 @@
       
       
       
-        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/features/">
+        <link rel="canonical" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/benefits/">
       
       
-        <link rel="prev" href="../extension/">
+        <link rel="prev" href="../utils/">
       
       
       
@@ -20,7 +20,7 @@
     
     
       
-        <title>Utilities - FastAPI SQLAlchemy Toolkit</title>
+        <title>Benefits - FastAPI SQLAlchemy Toolkit</title>
       
     
     
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#saving-user-of-the-request" class="md-skip">
+        <a href="#benefits" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Utilities
+              Benefits
             
           </span>
         </div>
@@ -161,7 +161,7 @@
           </li>
         
           <li class="md-select__item">
-            <a href="../ru/features/" hreflang="ru" class="md-select__link">
+            <a href="../ru/benefits/" hreflang="ru" class="md-select__link">
               Русский
             </a>
           </li>
@@ -285,7 +285,10 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
@@ -293,7 +296,7 @@
         <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
         
           
-          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
             
   
   <span class="md-ellipsis">
@@ -339,7 +342,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../model_manager/" class="md-nav__link">
+      <a href="../usage.mg" class="md-nav__link">
         
   
   <span class="md-ellipsis">
@@ -402,11 +405,74 @@
   
   
     <li class="md-nav__item">
+      <a href="../transactions/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Transactions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../db_validation/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Database Validation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../extension/" class="md-nav__link">
         
   
   <span class="md-ellipsis">
     Extending
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../utils/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Utilities
   </span>
   
 
@@ -434,7 +500,7 @@
           
   
   <span class="md-ellipsis">
-    Utilities
+    Benefits
   </span>
   
 
@@ -445,7 +511,7 @@
         
   
   <span class="md-ellipsis">
-    Utilities
+    Benefits
   </span>
   
 
@@ -465,27 +531,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#saving-user-of-the-request" class="md-nav__link">
+  <a href="#benefits" class="md-nav__link">
     <span class="md-ellipsis">
-      Saving user of the request
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-and-updating-objects-with-m2m-relationships" class="md-nav__link">
-    <span class="md-ellipsis">
-      Creating and updating objects with M2M relationships
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-by-list-of-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering by list of values
+      Benefits
     </span>
   </a>
   
@@ -532,27 +580,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#saving-user-of-the-request" class="md-nav__link">
+  <a href="#benefits" class="md-nav__link">
     <span class="md-ellipsis">
-      Saving user of the request
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#creating-and-updating-objects-with-m2m-relationships" class="md-nav__link">
-    <span class="md-ellipsis">
-      Creating and updating objects with M2M relationships
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#filtering-by-list-of-values" class="md-nav__link">
-    <span class="md-ellipsis">
-      Filtering by list of values
+      Benefits
     </span>
   </a>
   
@@ -576,48 +606,65 @@
   
 
 
-  <h1>Utilities</h1>
+  <h1>Benefits</h1>
 
-<h3 id="saving-user-of-the-request">Saving user of the request</h3>
-<p>You can associate the user of the request with the object being created/updated
-by passing an additional parameter to the <code>create</code> (<code>update</code>) method:</p>
-<pre><code class="language-python">@router.post(&quot;&quot;)
-async def create_child(
-    child_in: CreateUpdateChildSchema, session: Session, user: CurrentUser
-) -&gt; CreateUpdateChildSchema:
-    return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
-</code></pre>
-<h3 id="creating-and-updating-objects-with-m2m-relationships">Creating and updating objects with M2M relationships</h3>
-<p>If the model has an M2M relationship defined, using <code>ModelManager</code> allows you to pass a list of object IDs to this field.</p>
-<p><code>fastapi-sqlalchemy-toolkit</code> validates the existence of these objects and establishes the M2M relationship for them,
-without the need to create separate endpoints for working with M2M relationships.</p>
-<pre><code class="language-python"># Let the Person and House models have an M2M relationship
-from pydantic import BaseModel
+<h3 id="benefits">Benefits</h3>
+<p>An optional section demonstrating the reduction of boilerplate code when using <code>fastapi_sqlalchemy_toolkit</code>.</p>
+<p>If you need to add filters based on field values in a <code>FastAPI</code> endpoint, the code would look something like this:</p>
+<pre><code class="language-python">from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, Response, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.deps import get_async_session
+from app.models import MyModel, MyParentModel
+from app.schemas import MyObjectListSchema
+
+router = APIRouter()
+Session = Annotated[AsyncSession, Depends(get_async_session)]
 
 
-class PersonCreateSchema(BaseModel):
-    house_ids: list[int]
-
-...
-
-    in_obj = PersonCreateSchema(house_ids=[1, 2, 3])
-    await person_manager.create(session, in_obj)
-    # Creates a Person object and establishes an M2M relationship with Houses with ids 1, 2, and 3
-</code></pre>
-<h3 id="filtering-by-list-of-values">Filtering by list of values</h3>
-<p>One way to filter by a list of values is to pass this list as a
-query parameter in the URL as a comma-separated string.
-<code>fastapi-sqlalchemy-toolkit</code> provides a utility for filtering by a list of values passed as a comma-separated string:</p>
-<pre><code class="language-python">from uuid import UUID
-from fastapi_sqlalchemy_toolkit.utils import comma_list_query, get_comma_list_values
-
-@router.get(&quot;/children&quot;)
-async def get_child_objects(
+@router.get(&quot;/my-objects&quot;)
+async def get_my_objects(
     session: Session,
-    ids: comma_list_query = None,
-) -&gt; list[ChildListSchema]
-    ids = get_comma_list_values(ids, UUID)
-    return await child_manager.list(session, id=FieldFilter(ids, operator=&quot;in_&quot;))
+    user_id: UUID | None = None,
+    name: str | None = None,
+    parent_name: str | None = None,
+) -&gt; list[MyObjectListSchema]:
+    stmt = select(MyModel)
+    if user_id is not None:
+        stmt = stmt.filter_by(user_id=user_id)
+    if name is not None:
+        stmt = stmt.filter(MyModel.name.ilike == f&quot;%{name}%&quot;)
+    if parent_name is not None:
+        stmt = stmt.join(MyModel.parent)
+        stmt = stmt.filter(ParentModel.name.ilike == f&quot;%{parent_name}%&quot;)
+    result = await session.execute(stmt)
+    return result.scalars().all()
+</code></pre>
+<p>As you can see, implementing filtering requires duplicating template code.</p>
+<p>With <code>fastapi-sqlalchemy-toolkit</code>, this endpoint looks like this:</p>
+<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import FieldFilter
+
+from app.managers import my_object_manager
+
+@router.get(&quot;/my-objects&quot;)
+async def get_my_objects(
+    session: Session,
+    user_id: UUID | None = None,
+    name: str | None = None,
+    parent_name: str | None = None,
+) -&gt; list[MyObjectListSchema]:
+    return await my_object_manager.list(
+        session,
+        user_id=user_id,
+        filter_expressions={
+            MyObject.name: name,
+            MyObjectParent.name: parent_name
+        }
+    )
 </code></pre>
 
 
@@ -671,7 +718,7 @@ async def get_child_objects(
     </div>
     
     
-    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.path", "navigation.tracking", "navigation.top", "search.suggest", "content.code.copy"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": "..", "features": ["navigation.path", "navigation.tracking", "navigation.top", "navigation.sections", "search.suggest", "content.code.copy"], "search": "../assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="../assets/javascripts/bundle.8fd75fb4.min.js"></script>
