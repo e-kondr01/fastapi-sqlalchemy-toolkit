@@ -4,7 +4,7 @@
 
 ## Commit as you go
 
-https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go
+[Документация Commit as you go SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go)
 
 ```python
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -25,7 +25,7 @@ from app.managers import my_model_manager
 
 ## Begin once
 
-https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once
+[Докумнетация Begin once SQLAlchemy](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once)
 
 ```python
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
