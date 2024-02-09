@@ -390,6 +390,17 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Валидация на уровне БД
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -399,6 +410,61 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация существования внешних ключей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#m2m" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация существования M2M связей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация уникальных полей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация уникальных ограничений
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -484,6 +550,50 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация существования внешних ключей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#m2m" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация существования M2M связей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация уникальных полей
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      Валидация уникальных ограничений
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -502,30 +612,22 @@
 
 <h1 id="_1">Валидация на уровне базы данных</h1>
 <p>Методы <code>create</code> и <code>update</code> выполняют валидацию переданных значений на уровне БД, а именно:</p>
-<ol>
-<li>Валидация существования внешних ключей</li>
-</ol>
+<h2 id="_2">Валидация существования внешних ключей</h2>
 <p>Ecли <code>Child.parent_id</code> -- это <code>ForeignKey</code> на <code>Parent.id</code>, и значение <code>parent_id</code> устанавливается
 через <code>child_manager.create</code> или <code>child_manager.update</code>, то будет выполнен SQL запрос для проверки
 существования <code>Parent</code> с переданным id.</p>
 <p>Если такого объекта не существует, будет вызван <code>fastapi.HTTPException</code>.</p>
-<ol>
-<li>Валидация существования M2M связей</li>
-</ol>
+<h2 id="m2m">Валидация существования M2M связей</h2>
 <p>Ecли <code>Post.tags</code> -- это <code>ManyToMany</code> связь с  <code>Tag.id</code>, и значение <code>tags</code> устанавливается
 через <code>post_manager.create</code> или <code>post_manager.update</code> в виде переданного списка id,
 то будет выполнен SQL запрос для проверки существования всех <code>Tag</code> с переданными id.</p>
 <p>Если какого-либо из объектов не существует, будет вызван <code>fastapi.HTTPException</code>.</p>
-<ol>
-<li>Валидация уникальных полей</li>
-</ol>
+<h2 id="_3">Валидация уникальных полей</h2>
 <p>Ecли <code>Post.slug</code> -- поле, определённое с <code>unique=True</code>, и значение <code>slug</code> устанавливается
 через <code>post_manager.create</code> или <code>post_manager.update</code>, то будет выполнен SQL запрос для 
 проверки того, что не существует другого объекта <code>Post</code> с передаваемым значением <code>slug</code>.</p>
 <p>Если уникальность значения поля будет нарушена, вызывается <code>fastapi.HTTPException</code>.</p>
-<ol>
-<li>Валидация уникальных ограничений</li>
-</ol>
+<h2 id="_4">Валидация уникальных ограничений</h2>
 <p>Если в модели определены уникальные ограничения через <code>sqlalchemy.UniqueConstraint</code>, то
 при использовании методов <code>create</code> или <code>update</code> будет выполнен SQL запрос для проверки
 существования других объектов с таким же набором значений полей, входящих в уникальное огранчение.</p>

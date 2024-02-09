@@ -506,9 +506,9 @@
 а также эти модели связывает единственный внешний ключ). При этом необходимые для сортировки по полям
 связанных моделей join'ы будут сделаны автоматически.</p>
 <p>Для применения декларативной сортировки нужно:</p>
-<ol>
+<ul>
 <li>Определить поля, по которым доступна фильтрация.</li>
-</ol>
+</ul>
 <p>Это может быть либо списком/кортежем полей основной модели:</p>
 <pre><code class="language-python">from app.models import Child
 
@@ -531,10 +531,10 @@ child_ordering_fields = (
 </code></pre>
 <p>В таком случае, будут доступны следующий параметря для сортировки:
 <code>title</code>, <code>-title</code>, <code>parent_title</code>, <code>-parent_title</code>.</p>
-<ol>
+<ul>
 <li>В параметрах энпдоинта передать определённый выше список
 в <code>ordering_depends</code></li>
-</ol>
+</ul>
 <pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ordering_depends
 
 @router.get(&quot;/children&quot;)
@@ -544,9 +544,9 @@ async def get_child_objects(
 ) -&gt; list[ChildListSchema]
     ...
 </code></pre>
-<ol>
+<ul>
 <li>Передать параметр сортировки как параметр <code>order_by</code> в методы <code>ModelManager</code></li>
-</ol>
+</ul>
 <pre><code class="language-python">    return await child_manager.list(session=session, order_by=order_by)
 </code></pre>
 <p>Если <code>order_by</code> передаётся в методы <code>list</code> или <code>paginated_list</code>,
