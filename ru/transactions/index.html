@@ -278,48 +278,6 @@
       
   
   
-    
-  
-  
-  
-    
-    
-    
-    
-    
-      
-      
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="">
-            
-  
-  <span class="md-ellipsis">
-    FastAPI SQLAlchemy Toolkit
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_1">
-            <span class="md-nav__icon md-icon"></span>
-            FastAPI SQLAlchemy Toolkit
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
   
   
     <li class="md-nav__item">
@@ -335,10 +293,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -356,10 +313,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -377,10 +333,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -398,10 +353,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
     
@@ -477,10 +431,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -498,10 +451,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -519,10 +471,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -540,10 +491,9 @@
     </li>
   
 
-              
-            
-              
-                
+    
+      
+      
   
   
   
@@ -558,14 +508,6 @@
   
 
       </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
     </li>
   
 
@@ -635,7 +577,7 @@
 <h1 id="_1">Транзакции</h1>
 <p><code>fastapi-sqlalchemy-toolkit</code> поддерживает оба подхода к работе с транзакциями <code>SQAlchemy</code>.</p>
 <h2 id="commit-as-you-go">Commit as you go</h2>
-<p>https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go</p>
+<p><a href="https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#commit-as-you-go">Документация Commit as you go SQLAlchemy</a></p>
 <pre><code class="language-python">from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.managers import my_model_manager
 
@@ -652,7 +594,7 @@ from app.managers import my_model_manager
     # В БД сохранится только первый вызов
 </code></pre>
 <h2 id="begin-once">Begin once</h2>
-<p>https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once</p>
+<p><a href="https://docs.sqlalchemy.org/en/20/orm/session_transaction.html#begin-once">Докумнетация Begin once SQLAlchemy</a></p>
 <pre><code class="language-python">from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.managers import my_model_manager
 
