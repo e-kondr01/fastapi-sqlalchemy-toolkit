@@ -1,19 +1,19 @@
+from uuid import uuid4
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import uuid4
-from fastapi_sqlalchemy_toolkit import NullableQuery
-from tests.fixtures import (
+
+from tests.models import (
     Category,
     CategorySchema,
-    ChildSchema,
+    Child,
+    Parent,
     ParentSchema,
     category_manager,
     child_manager,
     parent_manager,
-    Child,
-    Parent,
 )
 
 
@@ -29,7 +29,7 @@ async def test_get(session: AsyncSession):
     )
     assert (
         category == category_to_check.scalars().first()
-    ), "Gotten not equal to object in database"
+    ), "Got not equal to object in database"
 
     nonexistent = await session.execute(
         select(Category).where(Category.title == "nonexistent-test-get-category-title")
@@ -53,6 +53,18 @@ async def test_exists(session: AsyncSession):
 
 
 async def test_get_or_404(session: AsyncSession):
+    test_category = Category(title="test-category-title")
+    session.add(test_category)
+    await session.commit()
+
+    category_from_manager = await category_manager.get_or_404(
+        session=session, title="test-category-title"
+    )
+    category = await session.execute(
+        select(Category).where(Category.title == "test-category-title")
+    )
+    assert category_from_manager == category.scalars().first()
+
     with pytest.raises(
         HTTPException,
         match="404: category with title=nonexistent-test-get-category-title not found",
@@ -63,6 +75,18 @@ async def test_get_or_404(session: AsyncSession):
 
 
 async def test_exists_or_404(session: AsyncSession):
+    test_category = Category(title="test-category-title")
+    session.add(test_category)
+    await session.commit()
+
+    category_from_manager = await category_manager.exists(
+        session=session, title="test-category-title"
+    )
+    category = await session.execute(
+        select(Category).where(Category.title == "test-category-title")
+    )
+    assert category_from_manager == (category.scalars().first() is not None)
+
     with pytest.raises(
         HTTPException,
         match="404: category with title=nonexistent-test-exists-category-title does not exist",
@@ -83,6 +107,11 @@ async def test_create(session: AsyncSession):
         created == category_to_check.scalars().first()
     ), "Created not equal to object in database"
 
+
+async def test_create_unique_filed_validation(session: AsyncSession):
+    await category_manager.create(
+        session=session, in_obj=CategorySchema(title="test-create-category-title")
+    )
     with pytest.raises(
         HTTPException,
         match="422: category c title test-create-category-title уже существует",
@@ -110,6 +139,26 @@ async def test_update(session: AsyncSession):
     assert (
         updated == category_to_check.scalars().first()
     ), "Updated not equal to object in database"
+
+
+async def test_update_unique_filed_validation(session: AsyncSession):
+    await session.execute(
+        insert(Category),
+        [{"title": "test-category-title1"}, {"title": "test-category-title2"}],
+    )
+    await session.commit()
+    category_to_update = await session.execute(
+        select(Category).where(Category.title == "test-category-title2")
+    )
+    with pytest.raises(
+        HTTPException,
+        match="422: category c title test-category-title1 уже существует",
+    ):
+        await category_manager.update(
+            session=session,
+            db_obj=category_to_update.scalars().first(),
+            in_obj=CategorySchema(title="test-category-title1"),
+        )
 
 
 async def test_delete(session: AsyncSession):
@@ -143,7 +192,7 @@ async def test_count(session: AsyncSession):
     assert amount == 3, "Incorrect count result"
 
 
-async def test_filter_with_simple_filter_expressions(session: AsyncSession):
+async def test_filter_with_where(session: AsyncSession):
     await session.execute(
         insert(Category),
         [
@@ -250,7 +299,7 @@ async def test_list_with_simple_filter(session: AsyncSession):
     assert category_list == categories.scalars().all()
 
 
-async def test_unique_constraint_validation(session: AsyncSession):
+async def test_create_unique_constraint_validation(session: AsyncSession):
     await parent_manager.create(
         session=session,
         in_obj=ParentSchema(
@@ -272,7 +321,41 @@ async def test_unique_constraint_validation(session: AsyncSession):
         )
 
 
-async def test_list_with_fk_filter(session: AsyncSession):
+async def test_update_unique_constraint_validation(session: AsyncSession):
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "test-list-parent-title",
+                "slug": "test-child-slug1",
+                "description": "test-parent-description1",
+            },
+            {
+                "title": "test-list-parent-title",
+                "slug": "test-parent-slug2",
+                "description": "test-parent-description2",
+            },
+        ],
+    )
+    await session.commit()
+    parent_to_update = await session.execute(
+        select(Parent).where(Parent.slug == "test-parent-slug2")
+    )
+    with pytest.raises(
+        HTTPException, match="422: parent с такими title, description уже существует."
+    ):
+        await parent_manager.update(
+            session=session,
+            db_obj=parent_to_update.scalars().first(),
+            in_obj=ParentSchema(
+                title="test-list-parent-title",
+                slug="test-parent-slug2",
+                description="test-parent-description1",
+            ),
+        )
+
+
+async def test_list_with_related_model_field_filter(session: AsyncSession):
     first_parent_id = uuid4()
     second_parent_id = uuid4()
     await parent_manager.create(
@@ -332,7 +415,7 @@ async def test_null_filtration(session: AsyncSession):
         insert(Parent),
         [
             {
-                "title": "test-list-child-title1",
+                "title": "test-list-parent-title1",
                 "slug": "test-child-slug1",
                 "description": "test-parent-description",
             },
@@ -346,6 +429,7 @@ async def test_null_filtration(session: AsyncSession):
             },
         ],
     )
+    await session.commit()
     parents = await parent_manager.list(
         session=session, nullable_filter_expressions={Parent.description: "null"}
     )

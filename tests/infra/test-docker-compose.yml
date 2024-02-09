@@ -4,7 +4,7 @@ name: toolkit-test
 services:
   postgres:
     image: postgres:15.2
-    ports:
+    expose:
       - "5430:5432"
     environment:
       - POSTGRES_DB=toolkit-test
