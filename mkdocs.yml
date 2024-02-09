@@ -1,0 +1,56 @@
+site_name: FastAPI SQLAlchemy Toolkit
+site_url: https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/
+repo_url: https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit
+repo_name: fastapi-sqlalchemy-toolkit
+
+nav:
+  - Home:
+      - User Guide: index.md
+      - ModelManager: model_manager.md
+      - Filtering: filtering.md
+      - Sorting: sorting.md
+      - Extension: extension.md
+      - Other useful features: features.md
+
+plugins:
+  - search
+  - i18n:
+      docs_structure: folder
+      reconfigure_material: true
+      reconfigure_search: true
+      languages:
+        - locale: en
+          default: true
+          name: English
+        - locale: ru
+          link: /ru/
+          name: Русский
+          nav:
+            - Главная:
+                - Руководство пользователя: index.md
+                - ModelManager: model_manager.md
+                - Фильтрация: filtering.md
+                - Сортировка: sorting.md
+                - Расширение: extension.md
+                - Другие полезности: features.md
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.path
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.top
