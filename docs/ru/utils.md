@@ -1,16 +1,17 @@
-### Сохранение пользователя запроса
+# Другие утилиты
+## Сохранение пользователя запроса
 
 Пользователя запроса можно задать в создаваемом/обновляемом объекте,
 передав дополнительный параметр в метод `create` (`update`):
 ```python
 @router.post("")
 async def create_child(
-    child_in: CreateUpdateChildSchema, session: Session, user: CurrentUser
+    child_in: CreateUpdateChildSchema, session: Session, user: User
 ) -> CreateUpdateChildSchema:
     return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
 ```
 
-### Создание и обновление объектов с M2M связями
+## Создание и обновление объектов с M2M связями
 Если на модели определена M2M связь, то использование `ModelManager` позволяет передать в это поле список ID объектов.
 
 `fastapi-sqlalchemy-toolkit` провалидирует существование этих объектов и установит им M2M связь,
@@ -31,7 +32,7 @@ class PersonCreateSchema(BaseModel):
     # Создаст объект Person и установит ему M2M связь с House с id 1, 2 и 3
 ```
 
-### Фильтрация по списку значений
+## Фильтрация по списку значений
 Один из способов фильтрации по списку значений -- передать этот список в качестве
 квери параметра в строку через запятую.
 `fastapi-sqlalchemy-toolkit` предоставляет утилиту для фильтрации по списку значений, переданного в строку через запятую:

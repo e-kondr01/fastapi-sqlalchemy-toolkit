@@ -11,13 +11,13 @@ REST API и взаимодействии с СУБД через `SQLAlchemy`;
 Для этого `FastAPI SQLAlachemy Toolkit` предоставляет класс менеджера `fastapi_sqlalchemy_toolkit.ModelManager` 
 для взаимодействия с моделью `SQLAlchemy`.
 
-## Особенности
+## Функционал
 
 - Методы для CRUD-операций с объектами в БД
 
-- Фильтрация с обработкой необязательных параметров запроса (см. раздел **Фильтрация**)
+- [Фильтрация](./filtering.md) с обработкой необязательных параметров запроса
 
-- Декларативная сортировка с помощью `ordering_dep` (см. раздел **Сортировка**)
+- Декларативная [сортировка](./sorting.md) с помощью `ordering_depends`
 
 - Валидация существования внешних ключей
 
@@ -31,14 +31,17 @@ REST API и взаимодействии с СУБД через `SQLAlchemy`;
 pip install fastapi-sqlalchemy-toolkit
 ```
 
-## Быстрый старт
+## Демонстрация
 
-Пример использования `fastapi-sqlalchemy-toolkit` доступен в директории `examples/app`
-yt
+Пример использования `fastapi-sqlalchemy-toolkit` в FastAPI приложении:
 
-## Узнать больше
-- [ModelManager](./model_manager.md)
+[https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit/tree/master/examples/app](https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit/tree/master/examples/app)
+
+## Далее
+- [Использование](./usage.md)
 - [Фильтрация](./filtering.md)
 - [Сортировка](./sorting.md)
+- [Транзакции](./transactions.md)
+- [Валидация на уровне БД](./db_validation.md)
 - [Расширения](./extension.md)
-- [Другие полезности](./features.md)
+- [Утилиты](./utils.md)

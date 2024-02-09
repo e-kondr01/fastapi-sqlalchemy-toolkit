@@ -11,8 +11,8 @@ from fastapi_sqlalchemy_toolkit import ModelManager
 class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
     ...
 ```
-### Дополнительная валидация
-Дополнительную валидацию можно добавить, переопределив метод `validate`:
+## Дополнительная валидация
+Дополнительную валидацию можно добавить, переопределив метод `run_db_valiation`:
 
 ```python
 class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelManager):
@@ -39,7 +39,7 @@ class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelMan
         return validated_data
 ```
 
-### Дополнительная бизнес логика при CRUD операциях
+## Дополнительная бизнес логика при CRUD операциях
 Если при CRUD операциях с моделью необходимо выполнить какую-то дополнительную бизнес логику,
 это можно сделать, переопределив соответствующие методы ModelManager:
 
@@ -53,29 +53,27 @@ class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelMan
     return created
 ```
 
-Такой подход соответствует принципу "Fat Models, Skinny Views" из Django.
-
-### Использование декларативных фильтров в нестандартных списочных запросах
+## Использование декларативных фильтров в нестандартных списочных запросах
 Если необходимо получить не просто список объектов, но и какие-то другие поля (допустим, кол-во дочерних объектов)
-или агрегации, но также необходима декларативная фильтрация, то можно новый свой метод менеджера,
-вызвав в нём метод `super().get_filter_expression`:
+или агрегации, но также необходима декларативная фильтрация, то можно определить метод менеджера,
+вызвав в нём метод `assemble_stmt`:
 ```python
 class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel):
     async def get_parents_with_children_count(
         self, session: AsyncSession, **kwargs
     ) -> list[RetrieveParentWithChildrenCountSchema]:
-        children_count_query = (
+        children_count_stmt = (
             select(func.count(Child.id))
             .filter(Child.parent_id == Parent.id)
             .scalar_subquery()
         )
-        query = (
+        stmt = (
             select(Parent, children_count_query.label("children_count"))
         )
 
         # Вызываем метод для получения фильтров SQLAlchemy из аргументов методов
         # list и paginated_list
-        query = query.filter(self.get_filter_expression(**kwargs))
+        stmt = self.assemble_stmt(stmt, **kwargs)
 
         result = await session.execute(query)
         result = result.unique().all()

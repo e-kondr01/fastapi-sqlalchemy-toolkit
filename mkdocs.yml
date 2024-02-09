@@ -4,13 +4,16 @@ repo_url: https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit
 repo_name: fastapi-sqlalchemy-toolkit
 
 nav:
-  - Home:
-      - User Guide: index.md
-      - ModelManager: model_manager.md
-      - Filtering: filtering.md
+  - FastAPI SQLAlchemy Toolkit:
+      - About: index.md
+      - Usage: usage.md
+      - Filters: filtering.md
       - Sorting: sorting.md
-      - Extension: extension.md
-      - Other useful features: features.md
+      - Transactions: transactions.md
+      - Database Validation: db_validation.md
+      - Extending: extension.md
+      - Utilities: utils.md
+      - Benefits: benefits.md
 
 plugins:
   - search
@@ -26,13 +29,16 @@ plugins:
           link: /ru/
           name: Русский
           nav:
-            - Главная:
-                - Руководство пользователя: index.md
-                - ModelManager: model_manager.md
+            - FastAPI SQLAlchemy Toolkit:
+                - Обзор: index.md
+                - Использование: usage.md
                 - Фильтрация: filtering.md
                 - Сортировка: sorting.md
+                - Транзакции: transactions.md
+                - Валидация на уровне БД: db_validation.md
                 - Расширение: extension.md
-                - Другие полезности: features.md
+                - Утилиты: utils.md
+                - Предпосылки: benefits.md
 
 theme:
   name: material
@@ -41,16 +47,37 @@ theme:
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - media: "(prefers-color-scheme: dark)"
       scheme: slate
+      primary: deep purple
+      accent: deep purple
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
   features:
     - navigation.path
     - navigation.tracking
-    - navigation.tabs
     - navigation.top
+    - navigation.sections
+    - search.suggest
+    - content.code.copy
+  markdown_extensions:
+    - pymdownx.details
+    - pymdownx.highlight:
+        anchor_linenums: true
+        line_spans: __span
+        pygments_lang_class: true
+    - pymdownx.inlinehilite
+    - pymdownx.snippets
+    - pymdownx.superfences
+    - toc:
+      permalink: true
+    - admonition
+    - attr_list
+    - tables
+    - def_list

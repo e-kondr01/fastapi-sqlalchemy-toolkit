@@ -34,8 +34,8 @@ Example of `fastapi-sqlalchemy-toolkit` usage is available in the `examples/app`
 
 
 ## Read More
-- [ModelManager](./model_manager.md)
+- [ModelManager](./usage.md)
 - [Filtering](./filtering.md)
 - [Sorting](./sorting.md)
 - [Extension](./extension.md)
-- [Other useful features](./features.md)
+- [Other utilities](./utils.md)
