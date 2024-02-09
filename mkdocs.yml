@@ -4,16 +4,15 @@ repo_url: https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit
 repo_name: fastapi-sqlalchemy-toolkit
 
 nav:
-  - FastAPI SQLAlchemy Toolkit:
-      - About: index.md
-      - Usage: usage.md
-      - Filters: filtering.md
-      - Sorting: sorting.md
-      - Transactions: transactions.md
-      - Database Validation: db_validation.md
-      - Extending: extension.md
-      - Utilities: utils.md
-      - Benefits: benefits.md
+  - About: index.md
+  - Usage: usage.md
+  - Filters: filtering.md
+  - Sorting: sorting.md
+  - Transactions: transactions.md
+  - Database Validation: db_validation.md
+  - Extending: extension.md
+  - Utilities: utils.md
+  - Benefits: benefits.md
 
 plugins:
   - search
@@ -29,16 +28,15 @@ plugins:
           link: /ru/
           name: Русский
           nav:
-            - FastAPI SQLAlchemy Toolkit:
-                - Обзор: index.md
-                - Использование: usage.md
-                - Фильтрация: filtering.md
-                - Сортировка: sorting.md
-                - Транзакции: transactions.md
-                - Валидация на уровне БД: db_validation.md
-                - Расширение: extension.md
-                - Утилиты: utils.md
-                - Предпосылки: benefits.md
+            - Обзор: index.md
+            - Использование: usage.md
+            - Фильтрация: filtering.md
+            - Сортировка: sorting.md
+            - Транзакции: transactions.md
+            - Валидация на уровне БД: db_validation.md
+            - Расширение: extension.md
+            - Утилиты: utils.md
+            - Предпосылки: benefits.md
 
 theme:
   name: material
