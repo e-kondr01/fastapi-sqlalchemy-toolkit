@@ -1,0 +1,24 @@
+name: Toolkit Tests CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Start Compose
+      run: docker compose -f tests/docker-compose.yml up -d
+    - name: Build Image
+      run: docker build -t test_toolkit:latest --file tests/Dockerfile .
+    - name: Run Container
+      run: docker run --name toolkit-test --network toolkit-test test_toolkit:latest
+    - name: Remove Container
+      run: docker rm toolkit-test
+    - name: Stop Compose
+      run: docker compose -f tests/docker-compose.yml down
