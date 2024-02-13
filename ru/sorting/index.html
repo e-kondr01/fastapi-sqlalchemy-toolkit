@@ -500,7 +500,7 @@
   
 
 
-<h1 id="_1">Сортировка</h1>
+<h1 id="_1">Сортировка<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <p><code>fastapi-sqlalchemy-toolkit</code> поддеживает декларативную сортировку по полям модели, 
 а также по полям связанных моделей (если это модель, напрямую связанная с основной,
 а также эти модели связывает единственный внешний ключ). При этом необходимые для сортировки по полям
@@ -510,45 +510,45 @@
 <li>Определить поля, по которым доступна фильтрация.</li>
 </ul>
 <p>Это может быть либо списком/кортежем полей основной модели:</p>
-<pre><code class="language-python">from app.models import Child
-
-child_ordering_fields = (
-    Child.title,
-    Child.created_at
-)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">Child</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">child_ordering_fields</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">Child</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">Child</span><span class="o">.</span><span class="n">created_at</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span>
+</span></code></pre></div>
 <p>В таком случае, будут доступны следующий параметря для сортировки:
 <code>title</code>, <code>-title</code>, <code>created_at</code>, <code>-created_at</code>.</p>
 <p>Дефис первым символом означает направление сортировки по убыванию.</p>
 <p>Либо можно определить маппинг строковых полей для сортировки
 на соответствующие поля моделей:</p>
-<pre><code class="language-python">from app.models import Child, Parent
-
-child_ordering_fields = (
-    &quot;title&quot;: MyModel.title,
-    &quot;parent_title&quot;: ParentModel.title
-)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">Child</span><span class="p">,</span> <span class="n">Parent</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="n">child_ordering_fields</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">MyModel</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">&quot;parent_title&quot;</span><span class="p">:</span> <span class="n">ParentModel</span><span class="o">.</span><span class="n">title</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">)</span>
+</span></code></pre></div>
 <p>В таком случае, будут доступны следующий параметря для сортировки:
 <code>title</code>, <code>-title</code>, <code>parent_title</code>, <code>-parent_title</code>.</p>
 <ul>
 <li>В параметрах энпдоинта передать определённый выше список
 в <code>ordering_depends</code></li>
 </ul>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ordering_depends
-
-@router.get(&quot;/children&quot;)
-async def get_child_objects(
-    session: Session,
-    order_by: ordering_depends(child_ordering_fields)
-) -&gt; list[ChildListSchema]
-    ...
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ordering_depends</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/children&quot;</span><span class="p">)</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_child_objects</span><span class="p">(</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">order_by</span><span class="p">:</span> <span class="n">ordering_depends</span><span class="p">(</span><span class="n">child_ordering_fields</span><span class="p">)</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChildListSchema</span><span class="p">]</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="o">...</span>
+</span></code></pre></div>
 <ul>
 <li>Передать параметр сортировки как параметр <code>order_by</code> в методы <code>ModelManager</code></li>
 </ul>
-<pre><code class="language-python">    return await child_manager.list(session=session, order_by=order_by)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">child_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span> <span class="n">order_by</span><span class="o">=</span><span class="n">order_by</span><span class="p">)</span>
+</span></code></pre></div>
 <p>Если <code>order_by</code> передаётся в методы <code>list</code> или <code>paginated_list</code>,
 и поле для сортировки относится к модели, напрямую связанную с основной,
 то будет выполнен необходимый <code>join</code> для применения сортировки.</p>

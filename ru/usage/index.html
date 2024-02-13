@@ -570,26 +570,26 @@
 
   <h1>Использование</h1>
 
-<h3 id="modelmanager">Инициализация ModelManager</h3>
+<h3 id="modelmanager">Инициализация ModelManager<a class="headerlink" href="#modelmanager" title="Permanent link">&para;</a></h3>
 <p>Для использования <code>fastapi-sqlaclhemy-toolkit</code> необходимо создать экземпляр <code>ModelManager</code> для своей модели:</p>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ModelManager
-
-from .models import MyModel
-from .schemas import MyModelCreateSchema, MyModelUpdateSchema
-
-my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ModelManager</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">MyModel</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span> <span class="nn">.schemas</span> <span class="kn">import</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">my_model_manager</span> <span class="o">=</span> <span class="n">ModelManager</span><span class="p">[</span><span class="n">MyModel</span><span class="p">,</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span><span class="p">](</span><span class="n">MyModel</span><span class="p">)</span>
+</span></code></pre></div>
 <p>Атрибут <code>default_ordering</code> определяет сортировку по умолчанию при получении списка объектов. В него нужно передать поле основной модели.</p>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ModelManager
-
-from .models import MyModel
-from .schemas import MyModelCreateSchema, MyModelUpdateSchema
-
-my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
-    MyModel, default_ordering=MyModel.title
-)
-</code></pre>
-<h3 id="modelmanager_1">Методы ModelManager</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ModelManager</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">MyModel</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kn">from</span> <span class="nn">.schemas</span> <span class="kn">import</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="n">my_model_manager</span> <span class="o">=</span> <span class="n">ModelManager</span><span class="p">[</span><span class="n">MyModel</span><span class="p">,</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span><span class="p">](</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">MyModel</span><span class="p">,</span> <span class="n">default_ordering</span><span class="o">=</span><span class="n">MyModel</span><span class="o">.</span><span class="n">title</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="modelmanager_1">Методы ModelManager<a class="headerlink" href="#modelmanager_1" title="Permanent link">&para;</a></h3>
 <p>Ниже перечислены CRUD методы, предоставляемые <code>ModelManager</code>.
 Документация параметров, принимаемых методами, находится в докстрингах методов.</p>
 <ul>

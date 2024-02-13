@@ -588,47 +588,47 @@
 
   <h1>Utilities</h1>
 
-<h3 id="saving-user-of-the-request">Saving user of the request</h3>
+<h3 id="saving-user-of-the-request">Saving user of the request<a class="headerlink" href="#saving-user-of-the-request" title="Permanent link">&para;</a></h3>
 <p>You can associate the user of the request with the object being created/updated
-by passing an additional parameter to the <code>create</code> (<code>update</code>) method:</p>
-<pre><code class="language-python">@router.post(&quot;&quot;)
-async def create_child(
-    child_in: CreateUpdateChildSchema, session: Session, user: CurrentUser
-) -&gt; CreateUpdateChildSchema:
-    return await child_manager.create(session=session, in_obj=child_in, author_id=user.id)
-</code></pre>
-<h3 id="creating-and-updating-objects-with-m2m-relationships">Creating and updating objects with M2M relationships</h3>
+by passing an additional parameter to the <code>create</code> (<code>update</code>) method:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">create_child</span><span class="p">(</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">child_in</span><span class="p">:</span> <span class="n">CreateUpdateChildSchema</span><span class="p">,</span> <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span> <span class="n">user</span><span class="p">:</span> <span class="n">CurrentUser</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">CreateUpdateChildSchema</span><span class="p">:</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">child_manager</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span> <span class="n">in_obj</span><span class="o">=</span><span class="n">child_in</span><span class="p">,</span> <span class="n">author_id</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">)</span>
+</span></code></pre></div></p>
+<h3 id="creating-and-updating-objects-with-m2m-relationships">Creating and updating objects with M2M relationships<a class="headerlink" href="#creating-and-updating-objects-with-m2m-relationships" title="Permanent link">&para;</a></h3>
 <p>If the model has an M2M relationship defined, using <code>ModelManager</code> allows you to pass a list of object IDs to this field.</p>
 <p><code>fastapi-sqlalchemy-toolkit</code> validates the existence of these objects and establishes the M2M relationship for them,
 without the need to create separate endpoints for working with M2M relationships.</p>
-<pre><code class="language-python"># Let the Person and House models have an M2M relationship
-from pydantic import BaseModel
-
-
-class PersonCreateSchema(BaseModel):
-    house_ids: list[int]
-
-...
-
-    in_obj = PersonCreateSchema(house_ids=[1, 2, 3])
-    await person_manager.create(session, in_obj)
-    # Creates a Person object and establishes an M2M relationship with Houses with ids 1, 2, and 3
-</code></pre>
-<h3 id="filtering-by-list-of-values">Filtering by list of values</h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Let the Person and House models have an M2M relationship</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="kn">from</span> <span class="nn">pydantic</span> <span class="kn">import</span> <span class="n">BaseModel</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="k">class</span> <span class="nc">PersonCreateSchema</span><span class="p">(</span><span class="n">BaseModel</span><span class="p">):</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">house_ids</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="o">...</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">in_obj</span> <span class="o">=</span> <span class="n">PersonCreateSchema</span><span class="p">(</span><span class="n">house_ids</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="k">await</span> <span class="n">person_manager</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">in_obj</span><span class="p">)</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="c1"># Creates a Person object and establishes an M2M relationship with Houses with ids 1, 2, and 3</span>
+</span></code></pre></div>
+<h3 id="filtering-by-list-of-values">Filtering by list of values<a class="headerlink" href="#filtering-by-list-of-values" title="Permanent link">&para;</a></h3>
 <p>One way to filter by a list of values is to pass this list as a
 query parameter in the URL as a comma-separated string.
-<code>fastapi-sqlalchemy-toolkit</code> provides a utility for filtering by a list of values passed as a comma-separated string:</p>
-<pre><code class="language-python">from uuid import UUID
-from fastapi_sqlalchemy_toolkit.utils import comma_list_query, get_comma_list_values
-
-@router.get(&quot;/children&quot;)
-async def get_child_objects(
-    session: Session,
-    ids: comma_list_query = None,
-) -&gt; list[ChildListSchema]
-    ids = get_comma_list_values(ids, UUID)
-    return await child_manager.list(session, id=FieldFilter(ids, operator=&quot;in_&quot;))
-</code></pre>
+<code>fastapi-sqlalchemy-toolkit</code> provides a utility for filtering by a list of values passed as a comma-separated string:
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kn">from</span> <span class="nn">uuid</span> <span class="kn">import</span> <span class="n">UUID</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit.utils</span> <span class="kn">import</span> <span class="n">comma_list_query</span><span class="p">,</span> <span class="n">get_comma_list_values</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/children&quot;</span><span class="p">)</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_child_objects</span><span class="p">(</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">ids</span><span class="p">:</span> <span class="n">comma_list_query</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChildListSchema</span><span class="p">]</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">ids</span> <span class="o">=</span> <span class="n">get_comma_list_values</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">UUID</span><span class="p">)</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">child_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="nb">id</span><span class="o">=</span><span class="n">FieldFilter</span><span class="p">(</span><span class="n">ids</span><span class="p">,</span> <span class="n">operator</span><span class="o">=</span><span class="s2">&quot;in_&quot;</span><span class="p">))</span>
+</span></code></pre></div></p>
 
 
 

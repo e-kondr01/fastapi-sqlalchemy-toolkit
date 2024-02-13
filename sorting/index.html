@@ -496,33 +496,33 @@
 <p><code>fastapi-sqlalchemy-toolkit</code> supports declarative sorting by model fields, as well as by fields of related models (if it is a model directly related to the main one and if these models are linked by a single foreign key). The necessary joins for sorting by fields of related models will be automatically performed.</p>
 <p>To apply declarative sorting:
 1. Define a list of fields available for filtering. The field can be a string if it is a field of the main model, or a model attribute if it is on a related model.</p>
-<pre><code class="language-python">from app.models import Parent
-
-child_ordering_fields = (
-    &quot;title&quot;,
-    &quot;created_at&quot;,
-    Parent.title,
-    Parent.created_at
-)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">Parent</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="n">child_ordering_fields</span> <span class="o">=</span> <span class="p">(</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;title&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;created_at&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">Parent</span><span class="o">.</span><span class="n">title</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">Parent</span><span class="o">.</span><span class="n">created_at</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
+</span></code></pre></div>
 <p>For each of the specified fields, sorting in ascending and descending order will be available. To sort by a field in descending order, pass its name in the query parameter starting with a hyphen (Django style). Thus, <code>?order_by=title</code> sorts by <code>title</code> in ascending order, and <code>?order_by=-title</code> sorts by <code>title</code> in descending order.</p>
 <ol>
 <li>Pass the above-defined list to the <code>ordering_dep</code> parameter in the endpoint parameters</li>
 </ol>
-<pre><code class="language-python">from fastapi_sqlalchemy_toolkit import ordering_dep
-
-@router.get(&quot;/children&quot;)
-async def get_child_objects(
-    session: Session,
-    order_by: ordering_dep(child_ordering_fields)
-) -&gt; list[ChildListSchema]
-    ...
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ordering_dep</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/children&quot;</span><span class="p">)</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_child_objects</span><span class="p">(</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">order_by</span><span class="p">:</span> <span class="n">ordering_dep</span><span class="p">(</span><span class="n">child_ordering_fields</span><span class="p">)</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ChildListSchema</span><span class="p">]</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="o">...</span>
+</span></code></pre></div>
 <ol>
 <li>Pass the sorting parameter as the <code>order_by</code> parameter in the <code>ModelManager</code> methods</li>
 </ol>
-<pre><code class="language-python">    return await child_manager.list(session=session, order_by=order_by)
-</code></pre>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">child_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">session</span><span class="o">=</span><span class="n">session</span><span class="p">,</span> <span class="n">order_by</span><span class="o">=</span><span class="n">order_by</span><span class="p">)</span>
+</span></code></pre></div>
 
 
 

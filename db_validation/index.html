@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#database-validation" class="md-skip">
+        <a href="#database-level-validation" class="md-skip">
           Skip to content
         </a>
       
@@ -390,6 +390,17 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Database Validation
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -399,6 +410,61 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#foreign-keys-existence-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Foreign Keys Existence Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#many-to-many-relationships-existence-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Many-to-Many Relationships Existence Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unique-fields-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unique Fields Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unique-constraints-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unique Constraints Validation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -484,6 +550,50 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#foreign-keys-existence-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Foreign Keys Existence Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#many-to-many-relationships-existence-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Many-to-Many Relationships Existence Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unique-fields-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unique Fields Validation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#unique-constraints-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Unique Constraints Validation
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -500,7 +610,20 @@
   
 
 
-<h1 id="database-validation">Database validation</h1>
+<h1 id="database-level-validation">Database-Level Validation<a class="headerlink" href="#database-level-validation" title="Permanent link">&para;</a></h1>
+<p>The <code>create</code> and <code>update</code> methods perform validation on the passed values at the database level. Specifically:</p>
+<h2 id="foreign-keys-existence-validation">Foreign Keys Existence Validation<a class="headerlink" href="#foreign-keys-existence-validation" title="Permanent link">&para;</a></h2>
+<p>If <code>Child.parent_id</code> is a <code>ForeignKey</code> referencing <code>Parent.id</code>, and the value of <code>parent_id</code> is set via <code>child_manager.create</code> or <code>child_manager.update</code>, an SQL query will be executed to check the existence of a <code>Parent</code> with the provided ID.</p>
+<p>If no such object exists, an <code>fastapi.HTTPException</code> will be raised.</p>
+<h2 id="many-to-many-relationships-existence-validation">Many-to-Many Relationships Existence Validation<a class="headerlink" href="#many-to-many-relationships-existence-validation" title="Permanent link">&para;</a></h2>
+<p>If <code>Post.tags</code> represents a <code>ManyToMany</code> relationship with <code>Tag.id</code>, and the <code>tags</code> value is set via <code>post_manager.create</code> or <code>post_manager.update</code> as a list of IDs, an SQL query will be executed to verify the existence of all <code>Tag</code> objects with the provided IDs.</p>
+<p>If any of the objects do not exist, an <code>fastapi.HTTPException</code> will be raised.</p>
+<h2 id="unique-fields-validation">Unique Fields Validation<a class="headerlink" href="#unique-fields-validation" title="Permanent link">&para;</a></h2>
+<p>If <code>Post.slug</code> is a field defined with <code>unique=True</code>, and the value of <code>slug</code> is set via <code>post_manager.create</code> or <code>post_manager.update</code>, an SQL query will be executed to check that no other <code>Post</code> object exists with the same <code>slug</code> value.</p>
+<p>If the uniqueness constraint is violated, an <code>fastapi.HTTPException</code> will be raised.</p>
+<h2 id="unique-constraints-validation">Unique Constraints Validation<a class="headerlink" href="#unique-constraints-validation" title="Permanent link">&para;</a></h2>
+<p>If the model defines unique constraints using <code>sqlalchemy.UniqueConstraint</code>, then when using the <code>create</code> or <code>update</code> methods, an SQL query will be executed to verify that no other objects with the same combination of field values in the unique constraint exist.</p>
+<p>If the unique constraint is violated, an <code>fastapi.HTTPException</code> will be raised.</p>
 
 
 
