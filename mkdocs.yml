@@ -64,16 +64,17 @@ theme:
     - navigation.sections
     - search.suggest
     - content.code.copy
-  markdown_extensions:
-    - pymdownx.details
-    - pymdownx.highlight:
-        anchor_linenums: true
-        line_spans: __span
-        pygments_lang_class: true
-    - pymdownx.inlinehilite
-    - pymdownx.snippets
-    - pymdownx.superfences
-    - toc:
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - toc:
       permalink: true
-    - admonition
-    - tables
+  - admonition
+  - tables

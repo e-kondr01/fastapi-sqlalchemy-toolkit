@@ -1,4 +1,3 @@
-### Benefits
 An optional section demonstrating the reduction of boilerplate code when using `fastapi_sqlalchemy_toolkit`.
 
 If you need to add filters based on field values in a `FastAPI` endpoint, the code would look something like this:

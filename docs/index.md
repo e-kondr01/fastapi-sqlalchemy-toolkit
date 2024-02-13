@@ -12,9 +12,9 @@ To achieve this, `FastAPI SQLAlachemy Toolkit` provides the `fastapi_sqlalchemy_
 
 - Methods for CRUD operations with objects in the database
 
-- Filtering with optional query parameters handling (see the [Filtering](#filtering) section)
+- Filtering with optional query parameters handling (see the [Filtering](./filtering.md) section)
 
-Declarative sorting using `ordering_dep` (see the [Sorting](#sorting) section)
+Declarative sorting using `ordering_dep` (see the [Sorting](./sorting.md) section)
 
 - Validation of foreign key existence
 
@@ -28,14 +28,16 @@ Declarative sorting using `ordering_dep` (see the [Sorting](#sorting) section)
 pip install fastapi-sqlalchemy-toolkit
 ```
 
-## Quick Start
+## Demonstration
+Example of `fastapi-sqlalchemy-toolkit` usage in FastAPI app:
 
-Example of `fastapi-sqlalchemy-toolkit` usage is available in the `examples/app` directory
-
+[https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit/tree/master/examples/app](https://github.com/e-kondr01/fastapi-sqlalchemy-toolkit/tree/master/examples/app)
 
 ## Read More
-- [ModelManager](./usage.md)
+- [Usage](./usage.md)
 - [Filtering](./filtering.md)
 - [Sorting](./sorting.md)
+- [Transactions](./transactions.md)
+- [Database-Level Validation](./db_validation.md)
 - [Extension](./extension.md)
 - [Other utilities](./utils.md)
