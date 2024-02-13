@@ -1,24 +1,24 @@
-name: Toolkit Tests CI
+name: fastapi-sqlalchemy-toolkit tests CI
 
 on:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Start Compose
-      run: docker compose -f tests/docker-compose.yml up -d
-    - name: Build Image
-      run: docker build -t test_toolkit:latest --file tests/Dockerfile .
-    - name: Run Container
-      run: docker run --name toolkit-test --network toolkit-test test_toolkit:latest
-    - name: Remove Container
-      run: docker rm toolkit-test
-    - name: Stop Compose
-      run: docker compose -f tests/docker-compose.yml down
+      - uses: actions/checkout@v3
+      - name: Start Compose
+        run: docker compose -f tests/docker-compose.yml up -d
+      - name: Build Image
+        run: docker build -t test_toolkit:latest --file tests/Dockerfile .
+      - name: Run Tests in Container
+        run: docker run --name toolkit-test --network toolkit-test test_toolkit:latest
+      - name: Remove Container
+        run: docker rm toolkit-test
+      - name: Stop Compose
+        run: docker compose -f tests/docker-compose.yml down
