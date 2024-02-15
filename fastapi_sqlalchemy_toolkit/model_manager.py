@@ -69,6 +69,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.models_to_relationship_attrs: dict[Type[ModelT], InstrumentedAttribute] = (
             {}
         )
+        # Значения по умолчанию для полей (используется для валидации)
         self.defaults: dict[str, Any] = {}
 
         attr: InstrumentedAttribute
@@ -96,9 +97,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     self.defaults[attr_name] = attr.default.arg
             elif hasattr(attr, "server_default") and attr.server_default is not None:
                 if isinstance(attr.type, BOOLEAN):
-                    self.defaults[attr_name] = (
-                        False if attr.server_default.arg == "False" else True
-                    )
+                    self.defaults[attr_name] = attr.server_default.arg != "False"
                 elif isinstance(attr.type, Integer):
                     self.defaults[attr_name] = int(attr.server_default.arg)
                 elif isinstance(attr.type, String):
@@ -138,6 +137,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         create_data = in_obj.model_dump() if in_obj else {}
         create_data.update(attrs)
+        # Добавляем дефолтные значения полей для валидации уникальности
         for field, default in self.defaults.items():
             if field not in create_data:
                 create_data[field] = default
