@@ -4,7 +4,8 @@ from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
-from sqlalchemy import Row, UniqueConstraint, func, select
+from sqlalchemy import Integer, Row, String, UniqueConstraint, func, select
+from sqlalchemy.dialects.postgresql import BOOLEAN
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
@@ -12,6 +13,7 @@ from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.sql.functions import Function
+from sqlalchemy.sql.schema import ScalarElementColumnDefault
 from sqlalchemy.sql.selectable import Exists
 
 from .filters import null_query_values
@@ -64,9 +66,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         # Model to related attr
         # Parent : Child.parent
         # Используется при составлении join'ов для фильтрации и сортировки
-        self.models_to_relationship_attrs: dict[
-            Type[ModelT], InstrumentedAttribute
-        ] = {}
+        self.models_to_relationship_attrs: dict[Type[ModelT], InstrumentedAttribute] = (
+            {}
+        )
+        self.defaults: dict[str, Any] = {}
 
         attr: InstrumentedAttribute
         for attr_name, attr in self.model.__dict__.items():
@@ -86,6 +89,20 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     # Выбираем  ManyToMany связи
                     if getattr(attr.prop, "secondary") is not None:
                         self.m2m_relationships[attr_name] = attr.prop.mapper.class_
+                if hasattr(attr, "nullable") and attr.nullable:
+                    self.defaults[attr_name] = None
+            if hasattr(attr, "default") and attr.default is not None:
+                if isinstance(attr.default, ScalarElementColumnDefault):
+                    self.defaults[attr_name] = attr.default.arg
+            elif hasattr(attr, "server_default") and attr.server_default is not None:
+                if isinstance(attr.type, BOOLEAN):
+                    self.defaults[attr_name] = (
+                        False if attr.server_default.arg == "False" else True
+                    )
+                elif isinstance(attr.type, Integer):
+                    self.defaults[attr_name] = int(attr.server_default.arg)
+                elif isinstance(attr.type, String):
+                    self.defaults[attr_name] = attr.server_default.arg
 
     ##################################################################################
     # Public API
@@ -119,12 +136,12 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: созданный экземпляр модели
         """
-        if in_obj:
-            create_data = in_obj.model_dump()
-        else:
-            create_data = {}
-
+        create_data = in_obj.model_dump() if in_obj else {}
         create_data.update(attrs)
+        for field, default in self.defaults.items():
+            if field not in create_data:
+                create_data[field] = default
+
         await self.run_db_validation(session, in_obj=create_data)
         db_obj = self.model(**create_data)
         session.add(db_obj)
@@ -331,8 +348,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
-        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
-        | None = None,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
@@ -447,8 +465,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = None,
-        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
-        | None = None,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         unique: bool = False,
@@ -759,9 +778,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             if value is None:
                 del filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                filter_expressions[
-                    filter_expression
-                ] = f"%{filter_expressions[filter_expression]}%"
+                filter_expressions[filter_expression] = (
+                    f"%{filter_expressions[filter_expression]}%"
+                )
 
     @staticmethod
     def handle_nullable_filter_expressions(
@@ -773,9 +792,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             elif value is None:
                 del nullable_filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                nullable_filter_expressions[
-                    filter_expression
-                ] = f"%{nullable_filter_expressions[filter_expression]}%"
+                nullable_filter_expressions[filter_expression] = (
+                    f"%{nullable_filter_expressions[filter_expression]}%"
+                )
 
     def get_reverse_relation_filter_stmt(
         self,
