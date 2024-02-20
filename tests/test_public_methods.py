@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import insert, select
 from sqlalchemy.exc import MissingGreenlet
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from tests.models import (
@@ -295,33 +295,22 @@ async def test_create_unique_filed_validation(session: AsyncSession):
         )
 
 
-async def test_create_without_commit(
-    connection: AsyncConnection, transaction: AsyncTransaction
-):
+async def test_create_without_commit(session: AsyncSession):
     category_title = "test-category-title"
     no_commit_category_title = f"{category_title}-no-commit"
 
-    first_session = AsyncSession(
-        bind=connection,
-        join_transaction_mode="create_savepoint",
-        expire_on_commit=False,
+    await category_manager.create(
+        session=session, in_obj=CategorySchema(title=category_title), commit=True
     )
-    async with first_session as session:
-        await category_manager.create(
-            session=session, in_obj=CategorySchema(title=category_title), commit=True
-        )
-        await category_manager.create(
-            session=session,
-            in_obj=CategorySchema(title=no_commit_category_title),
-            commit=False,
-        )
+    await category_manager.create(
+        session=session,
+        in_obj=CategorySchema(title=no_commit_category_title),
+        commit=False,
+    )
 
-    second_session = AsyncSession(
-        bind=connection,
-        join_transaction_mode="create_savepoint",
-        expire_on_commit=False,
-    )
-    async with second_session as session:
+    await session.close()
+
+    async with session:
         category_to_check_without_commit = await session.execute(
             select(Category).where(Category.title == no_commit_category_title)
         )
@@ -331,8 +320,6 @@ async def test_create_without_commit(
             select(Category).where(Category.title == category_title)
         )
         assert category_to_check_with_commit.scalars().first().title == category_title
-
-    await transaction.rollback()
 
 
 async def test_update(session: AsyncSession):
