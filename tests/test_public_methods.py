@@ -695,9 +695,7 @@ async def test_list_with_options(session: AsyncSession):
     session.add_all([parent, parent_without_children, child])
     await session.commit()
 
-    parents_without_options = await parent_manager.list(
-        session=session, where=(Child.title == "test-child-title")
-    )
+    parents_without_options = await parent_manager.list(session=session)
     with pytest.raises(MissingGreenlet):
         assert parents_without_options[0].children[0].id == child.id
 
@@ -705,7 +703,6 @@ async def test_list_with_options(session: AsyncSession):
         session=session,
         id=parent.id,
         options=selectinload(Parent.children),
-        where=(Child.title == "test-child-title"),
     )
     assert len(parents_with_options) == 1
     assert parents_with_options[0].children[0].id == child.id
