@@ -1,7 +1,8 @@
 from typing import AsyncGenerator
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction
+from sqlalchemy.ext.asyncio import (AsyncConnection, AsyncSession,
+                                    AsyncTransaction)
 
 from tests.db import async_session_factory, engine
 from tests.models import Base
