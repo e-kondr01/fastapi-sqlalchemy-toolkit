@@ -4,13 +4,8 @@ from uuid import UUID
 from app.api.deps import Session
 from app.managers import child_manager
 from app.models import Child, Parent
-from app.schemas import (
-    ChildDetailSchema,
-    ChildListSchema,
-    CreateChildSchema,
-    HTTPErrorSchema,
-    PatchChildSchema,
-)
+from app.schemas import (ChildDetailSchema, ChildListSchema, CreateChildSchema,
+                         HTTPErrorSchema, PatchChildSchema)
 from fastapi import APIRouter, Response, status
 from fastapi_pagination import Page
 from sqlalchemy import func
