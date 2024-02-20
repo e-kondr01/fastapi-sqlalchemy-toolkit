@@ -10,8 +10,13 @@ from sqlalchemy.orm import joinedload
 from app.api.deps import Session
 from app.managers import child_manager
 from app.models import Child, Parent
-from app.schemas import (ChildDetailSchema, ChildListSchema, CreateChildSchema,
-                         HTTPErrorSchema, PatchChildSchema)
+from app.schemas import (
+    ChildDetailSchema,
+    ChildListSchema,
+    CreateChildSchema,
+    HTTPErrorSchema,
+    PatchChildSchema,
+)
 
 router = APIRouter()
 

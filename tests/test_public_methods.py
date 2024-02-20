@@ -4,13 +4,19 @@ import pytest
 from fastapi import HTTPException
 from sqlalchemy import insert, select
 from sqlalchemy.exc import MissingGreenlet
-from sqlalchemy.ext.asyncio import (AsyncConnection, AsyncSession,
-                                    AsyncTransaction)
+from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction
 from sqlalchemy.orm import selectinload
 
-from tests.models import (Category, CategorySchema, Child, Parent,
-                          ParentSchema, category_manager, child_manager,
-                          parent_manager)
+from tests.models import (
+    Category,
+    CategorySchema,
+    Child,
+    Parent,
+    ParentSchema,
+    category_manager,
+    child_manager,
+    parent_manager,
+)
 
 
 async def test_get(session: AsyncSession):
