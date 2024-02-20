@@ -1,9 +1,8 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
-
 from fastapi_sqlalchemy_toolkit.utils import make_partial_model
+from pydantic import BaseModel
 
 
 class ChildBaseSchema(BaseModel):

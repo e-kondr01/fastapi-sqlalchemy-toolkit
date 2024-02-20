@@ -1,13 +1,12 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
+from fastapi_sqlalchemy_toolkit.model_manager import ModelManager
 from pydantic import BaseModel
 from sqlalchemy import (Column, DateTime, ForeignKey, Table, UniqueConstraint,
                         func)
 from sqlalchemy.orm import (DeclarativeBase, Mapped, declared_attr,
                             mapped_column, relationship)
-
-from fastapi_sqlalchemy_toolkit.model_manager import ModelManager
 
 
 class Base(DeclarativeBase):
