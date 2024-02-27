@@ -1,6 +1,9 @@
 ### Инициализация ModelManager
 
-Для использования `fastapi-sqlaclhemy-toolkit` необходимо создать экземпляр `ModelManager` для своей модели:
+Для взаимодействия с моделью `SQLAlchemy`, `fastapi-sqlalchemy-toolkit` предоставляет
+класс `ModelManager`. Его методы используются для взаимодействия с БД.
+
+Создать экземпляр `ModelManager` для конкретной модели можно следующим образом:
 
 ```python
 from fastapi_sqlalchemy_toolkit import ModelManager
@@ -8,10 +11,17 @@ from fastapi_sqlalchemy_toolkit import ModelManager
 from .models import MyModel
 from .schemas import MyModelCreateSchema, MyModelUpdateSchema
 
-my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](MyModel)
+my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](
+    MyModel
+)
 ```
 
-Атрибут `default_ordering` определяет сортировку по умолчанию при получении списка объектов. В него нужно передать поле основной модели.
+В качестве аргумента передаётся модель `SQLAlchemy`. Кроме того, используется параметризация типов 
+класса `ModelManager`. В параметры типа передаётся модель `SQLAlchemy`, `Pydantic` модель для
+создания объекта и `Pydantic` модель для обновления объекта.
+
+Атрибут `default_ordering` определяет сортировку по умолчанию при получении списка объектов.
+В него можно передать поле модели:
 
 ```python
 from fastapi_sqlalchemy_toolkit import ModelManager
