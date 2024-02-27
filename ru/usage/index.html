@@ -571,15 +571,23 @@
   <h1>Использование</h1>
 
 <h3 id="modelmanager">Инициализация ModelManager<a class="headerlink" href="#modelmanager" title="Permanent link">&para;</a></h3>
-<p>Для использования <code>fastapi-sqlaclhemy-toolkit</code> необходимо создать экземпляр <code>ModelManager</code> для своей модели:</p>
+<p>Для взаимодействия с моделью <code>SQLAlchemy</code>, <code>fastapi-sqlalchemy-toolkit</code> предоставляет
+класс <code>ModelManager</code>. Его методы используются для взаимодействия с БД.</p>
+<p>Создать экземпляр <code>ModelManager</code> для конкретной модели можно следующим образом:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ModelManager</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">MyModel</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kn">from</span> <span class="nn">.schemas</span> <span class="kn">import</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">my_model_manager</span> <span class="o">=</span> <span class="n">ModelManager</span><span class="p">[</span><span class="n">MyModel</span><span class="p">,</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span><span class="p">](</span><span class="n">MyModel</span><span class="p">)</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="n">my_model_manager</span> <span class="o">=</span> <span class="n">ModelManager</span><span class="p">[</span><span class="n">MyModel</span><span class="p">,</span> <span class="n">MyModelCreateSchema</span><span class="p">,</span> <span class="n">MyModelUpdateSchema</span><span class="p">](</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">MyModel</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span>
 </span></code></pre></div>
-<p>Атрибут <code>default_ordering</code> определяет сортировку по умолчанию при получении списка объектов. В него нужно передать поле основной модели.</p>
+<p>В качестве аргумента передаётся модель <code>SQLAlchemy</code>. Кроме того, используется параметризация типов 
+класса <code>ModelManager</code>. В параметры типа передаётся модель <code>SQLAlchemy</code>, <code>Pydantic</code> модель для
+создания объекта и <code>Pydantic</code> модель для обновления объекта.</p>
+<p>Атрибут <code>default_ordering</code> определяет сортировку по умолчанию при получении списка объектов.
+В него можно передать поле модели:</p>
 <div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">ModelManager</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">MyModel</span>
