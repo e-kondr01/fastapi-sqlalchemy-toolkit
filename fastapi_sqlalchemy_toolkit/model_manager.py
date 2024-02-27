@@ -148,7 +148,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.run_db_validation(session, in_obj=create_data)
         db_obj = self.model(**create_data)
         session.add(db_obj)
-        await self.save(session, commit)
+        await self.save(session, commit=commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
@@ -614,7 +614,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         for field in update_data:
             setattr(db_obj, field, update_data[field])
         session.add(db_obj)
-        await self.save(session, commit)
+        await self.save(session, commit=commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
@@ -634,7 +634,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :returns: переданный в функцию экземпляр модели
         """
         await session.delete(db_obj)
-        await self.save(session, commit)
+        await self.save(session, commit=commit)
         return db_obj
 
     ##################################################################################
