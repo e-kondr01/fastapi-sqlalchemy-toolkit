@@ -1,4 +1,6 @@
-from typing import Any, Callable, Generic, Iterable, List, Type, TypeVar
+# ruff: noqa: UP006
+from collections.abc import Callable, Iterable
+from typing import Any, Generic, List, TypeVar  # noqa: UP035
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
@@ -33,7 +35,7 @@ def sqlalchemy_model_to_dict(model: ModelT) -> dict:
 class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def __init__(
         self,
-        model: Type[ModelT],
+        model: type[ModelT],
         default_ordering: InstrumentedAttribute | UnaryExpression | None = None,
     ) -> None:
         """
@@ -50,7 +52,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         # str() of FK attr to related model
         # "parent_id": <class app.models.parent.Parent>
         # Используется для валидации существования FK при создании/обновлении объекта
-        self.fk_name_to_model: dict[str, Type[ModelT]] = {}
+        self.fk_name_to_model: dict[str, type[ModelT]] = {}
 
         self.unique_constraints: List[List[str]] = []
         if hasattr(self.model, "__table_args__"):
@@ -61,14 +63,14 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     else:
                         self.unique_constraints.append(table_arg._pending_colargs)
 
-        self.reverse_relationships: dict[str, Type[ModelT]] = {}
-        self.m2m_relationships: dict[str, Type[ModelT]] = {}
+        self.reverse_relationships: dict[str, type[ModelT]] = {}
+        self.m2m_relationships: dict[str, type[ModelT]] = {}
         # Model to related attr
         # Parent : Child.parent
         # Используется при составлении join'ов для фильтрации и сортировки
-        self.models_to_relationship_attrs: dict[Type[ModelT], InstrumentedAttribute] = (
-            {}
-        )
+        self.models_to_relationship_attrs: dict[
+            type[ModelT], InstrumentedAttribute
+        ] = {}
         # Значения по умолчанию для полей (используется для валидации)
         self.defaults: dict[str, Any] = {}
 
@@ -88,7 +90,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                             str(attr.expression.right).split(".")[1]
                         ] = attr.prop.mapper.class_
                     # Выбираем  ManyToMany связи
-                    if getattr(attr.prop, "secondary") is not None:
+                    if attr.prop.secondary is not None:
                         self.m2m_relationships[attr_name] = attr.prop.mapper.class_
                 if hasattr(attr, "nullable") and attr.nullable:
                     self.defaults[attr_name] = None
@@ -112,6 +114,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         session: AsyncSession,
         in_obj: CreateSchemaT | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
+        *,
         commit: bool = True,
         **attrs: Any,
     ) -> ModelT:
@@ -410,9 +413,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         )
 
         for filter_expression, value in filter_expressions.items():
-            if isinstance(filter_expression, InstrumentedAttribute) or isinstance(
-                filter_expression, Function
-            ):
+            if isinstance(filter_expression, InstrumentedAttribute | Function):
                 stmt = stmt.filter(filter_expression == value)
             else:
                 stmt = stmt.filter(filter_expression(value))
@@ -425,8 +426,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
-        unique: bool = False,
         base_stmt: Select | None = None,
+        *,
+        unique: bool = False,
         **simple_filters: Any,
     ) -> List[ModelT] | List[Row]:
         """
@@ -470,8 +472,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
-        unique: bool = False,
         base_stmt: Select | None = None,
+        *,
+        unique: bool = False,
         **simple_filters: Any,
     ) -> List[ModelT] | List[Row]:
         """
@@ -572,6 +575,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         db_obj: ModelT,
         in_obj: UpdateSchemaT | None = None,
         refresh_attribute_names: Iterable[str] | None = None,
+        *,
         commit: bool = True,
         exclude_unset: bool = True,
         **attrs: Any,
@@ -604,11 +608,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: обновлённый экземпляр модели
         """
-        if in_obj:
-            update_data = in_obj.model_dump(exclude_unset=exclude_unset)
-        else:
-            update_data = {}
-
+        update_data = in_obj.model_dump(exclude_unset=exclude_unset) if in_obj else {}
         update_data.update(attrs)
         await self.run_db_validation(session, db_obj=db_obj, in_obj=update_data)
         for field in update_data:
@@ -619,7 +619,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         return db_obj
 
     async def delete(
-        self, session: AsyncSession, db_obj: ModelT, commit: bool = True
+        self, session: AsyncSession, db_obj: ModelT, *, commit: bool = True
     ) -> ModelT:
         """
         Удаление экземпляра модели из БД.
@@ -642,7 +642,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     ##################################################################################
 
     @staticmethod
-    async def save(session: AsyncSession, commit: bool = True) -> None:
+    async def save(session: AsyncSession, *, commit: bool = True) -> None:
         """
         Сохраняет изменения в БД, обрабатывая разное использовании сессии:
         "commit as you go" или "begin once".
@@ -683,7 +683,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.validate_unique_constraints(session, in_obj)
         return in_obj
 
-    def get_select(self, base_stmt: Select | None = None, **kwargs) -> Select:
+    def get_select(self, base_stmt: Select | None = None, **_kwargs: Any) -> Select:
         if base_stmt is not None:
             return base_stmt
         return select(self.model)
@@ -719,7 +719,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             if ordering_model != self.model:
                 models_to_join.add(ordering_model)
 
-        for filter_expression in filter_expressions.keys():
+        for filter_expression in filter_expressions:
             if isinstance(filter_expression, InstrumentedAttribute):
                 model = filter_expression.parent._identity_class
             elif isinstance(filter_expression, Function):
@@ -748,6 +748,14 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
     def get_order_by_expression(
         self, order_by: InstrumentedAttribute | UnaryExpression | None
+    ) -> (
+        InstrumentedAttribute
+        | UnaryExpression
+        | None
+        | tuple[
+            InstrumentedAttribute | UnaryExpression,
+            InstrumentedAttribute | UnaryExpression,
+        ]
     ):
         if order_by is not None:
             if self.default_ordering is not None:
@@ -765,19 +773,19 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
     @staticmethod
     def handle_filter_expressions(
-        filter_expressions: dict[InstrumentedAttribute | Callable, Any]
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any],
     ) -> None:
         for filter_expression, value in filter_expressions.copy().items():
             if value is None:
                 del filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                filter_expressions[filter_expression] = (
-                    f"%{filter_expressions[filter_expression]}%"
-                )
+                filter_expressions[
+                    filter_expression
+                ] = f"%{filter_expressions[filter_expression]}%"
 
     @staticmethod
     def handle_nullable_filter_expressions(
-        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any]
+        nullable_filter_expressions: dict[InstrumentedAttribute | Callable, Any],
     ) -> None:
         for filter_expression, value in nullable_filter_expressions.copy().items():
             if value in null_query_values:
@@ -785,9 +793,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             elif value is None:
                 del nullable_filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                nullable_filter_expressions[filter_expression] = (
-                    f"%{nullable_filter_expressions[filter_expression]}%"
-                )
+                nullable_filter_expressions[
+                    filter_expression
+                ] = f"%{nullable_filter_expressions[filter_expression]}%"
 
     def get_reverse_relation_filter_stmt(
         self,
@@ -923,7 +931,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                         ),
                     )
 
-    async def handle_m2m_fields(self, session: AsyncSession, in_obj: ModelDict):
+    async def handle_m2m_fields(self, session: AsyncSession, in_obj: ModelDict) -> None:
         for field in in_obj:
             if field in self.m2m_relationships:
                 related_model = self.m2m_relationships[field]

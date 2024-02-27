@@ -1,5 +1,6 @@
+from collections.abc import Sequence
 from enum import Enum
-from typing import Annotated, Sequence
+from typing import Annotated
 from uuid import uuid4
 
 from fastapi import Depends
@@ -21,8 +22,8 @@ def get_ordering_enum(
 
 
 def ordering_depends(
-    ordering_fields: Sequence[InstrumentedAttribute] | dict[str, InstrumentedAttribute]
-):
+    ordering_fields: Sequence[InstrumentedAttribute] | dict[str, InstrumentedAttribute],
+) -> object:
     """
     Создаёт fastapi.Depends для квери параметра сортировки по переданным полям модели.
 

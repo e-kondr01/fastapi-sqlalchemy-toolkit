@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Annotated, Any, Optional, Type, TypeVar
+from typing import Annotated, Any, Optional, TypeVar
 
 import pydantic
 from fastapi import Query
@@ -16,17 +16,17 @@ def _make_field_optional(
         if field.default == pydantic.pydantic_core.PydanticUndefined
         else field.default
     )
-    new.annotation = Optional[field.annotation]  # type: ignore
+    new.annotation = Optional[field.annotation]  # type: ignore  # noqa: UP007
     return (new.annotation, new)
 
 
-def make_partial_model(model: Type[BaseModelT]) -> Type[BaseModelT]:
+def make_partial_model(model: type[BaseModelT]) -> type[BaseModelT]:
     """
     Функция, создающая Pydantic модель из переданной,
     делая все поля модели необязательными.
     Полезно для схем PATCH запросов.
     """
-    model = pydantic.create_model(  # type: ignore
+    return pydantic.create_model(  # type: ignore
         f"Partial{model.__name__}",
         __base__=model,
         __module__=model.__module__,
@@ -35,7 +35,6 @@ def make_partial_model(model: Type[BaseModelT]) -> Type[BaseModelT]:
             for field_name, field_info in model.model_fields.items()
         },
     )
-    return model
 
 
 # Утилиты для передачи нескольких значений для фильтрации в одном
@@ -45,7 +44,7 @@ CommaSepQuery = Annotated[
 ]
 
 
-def comma_sep_q_to_list(query: str | None, type_: Type) -> list | None:
+def comma_sep_q_to_list(query: str | None, type_: type) -> list | None:
     """
     :param query: Значение квери параметра
     (строка со значениями, перечисленными через запятую)
