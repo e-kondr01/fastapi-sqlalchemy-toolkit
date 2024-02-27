@@ -53,9 +53,7 @@ class MyModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchema](ModelMan
     return created
 ```
 
-This approach aligns with the "*Fat Models, Skinny Views*" principle from Django.
-
-### Using declarative dilters in non-standard list queries
+### Using declarative filters in non-standard list queries
 If you need to retrieve not just a list of objects but also other fields (e.g., the number of child objects)
 or aggregations, and you also need declarative filtering, you can create a new manager method,
 calling the `super().get_filter_expression` method within it:
