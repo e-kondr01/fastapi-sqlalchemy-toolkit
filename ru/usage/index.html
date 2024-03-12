@@ -611,6 +611,10 @@
 <li><code>update</code> - обновление объекта; выполняет валидацию значений полей на уровне БД</li>
 <li><code>delete</code> - удаление объекта</li>
 </ul>
+<p>Использование методов <code>paginated_list</code> и <code>paginated_filter</code>, согласно документации 
+<code>fastapi_pagination</code>, требует применения <code>fastapi_pagination.add_pagination</code>
+к приложению <code>FastAPI</code>, и использование <code>fastapi_pagination.Page</code> в типизации ответа
+эндпоинта FastAPI.</p>
 
 
 
