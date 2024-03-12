@@ -48,3 +48,8 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 - `count` - получение количества объектов
 - `update` - обновление объекта; выполняет валидацию значений полей на уровне БД
 - `delete` - удаление объекта
+
+Использование методов `paginated_list` и `paginated_filter`, согласно документации 
+`fastapi_pagination`, требует применения `fastapi_pagination.add_pagination`
+к приложению `FastAPI`, и использование `fastapi_pagination.Page` в типизации ответа
+эндпоинта FastAPI.
