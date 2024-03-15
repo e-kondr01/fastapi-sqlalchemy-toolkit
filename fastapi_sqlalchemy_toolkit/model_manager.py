@@ -847,7 +847,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             stmt = stmt.options(option)
 
         if where is not None:
-            stmt = stmt.where(where)
+            if isinstance(where, tuple):
+                stmt = stmt.where(*where)
+            else:
+                stmt = stmt.where(where)
 
         return stmt
 
