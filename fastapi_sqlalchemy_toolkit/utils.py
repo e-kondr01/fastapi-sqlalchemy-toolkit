@@ -2,6 +2,7 @@ from copy import deepcopy
 from typing import Annotated, Any, Optional, TypeVar
 
 import pydantic
+import pydantic_core
 from fastapi import Query
 
 BaseModelT = TypeVar("BaseModelT", bound=pydantic.BaseModel)
@@ -12,9 +13,7 @@ def _make_field_optional(
 ) -> tuple[Any, pydantic.fields.FieldInfo]:
     new = deepcopy(field)
     new.default = (
-        None
-        if field.default == pydantic.pydantic_core.PydanticUndefined
-        else field.default
+        None if field.default == pydantic_core.PydanticUndefined else field.default
     )
     new.annotation = Optional[field.annotation]  # type: ignore  # noqa: UP007
     return (new.annotation, new)
