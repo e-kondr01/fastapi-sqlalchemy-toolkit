@@ -53,3 +53,9 @@ my_model_manager = ModelManager[MyModel, MyModelCreateSchema, MyModelUpdateSchem
 `fastapi_pagination`, требует применения `fastapi_pagination.add_pagination`
 к приложению `FastAPI`, и использование `fastapi_pagination.Page` в типизации ответа
 эндпоинта FastAPI.
+
+Также доступны следующие методы для выполнения действий "пачкой":
+
+- `bulk_create` - создание объектов (частично выполняет валидацию на уровне БД)
+- `bulk_update` - обновление объектов (не выполняет валидацию на уровне БД)
+- `bulk_delete` - удаление объектов

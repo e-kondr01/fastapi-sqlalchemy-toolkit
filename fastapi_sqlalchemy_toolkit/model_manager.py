@@ -6,7 +6,17 @@ from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
-from sqlalchemy import Integer, Row, String, UniqueConstraint, func, insert, select
+from sqlalchemy import (
+    Integer,
+    Row,
+    String,
+    UniqueConstraint,
+    delete,
+    func,
+    insert,
+    select,
+    update,
+)
 from sqlalchemy.dialects.postgresql import BOOLEAN
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
@@ -155,47 +165,44 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     async def bulk_create(
         self,
         session: AsyncSession,
-        in_objs: list[CreateSchemaT] | None = None,
-        refresh_attribute_names: Iterable[str] | None = None,
+        in_objs: list[CreateSchemaT],
         *,
         commit: bool = True,
+        returning: bool = True,
         **attrs: Any,
-    ) -> list[ModelT]:
+    ) -> list[ModelT] | None:
         """
-        Создание экземпляров моделей и сохранение в БД.
+        Создание экземпляров модели пачкой и сохранение в БД.
+
+        Валидация на уровне БД выполняется для каждого объекта
+        (могут быть ошибки, если несколько создаваемых объектов
+        имеют одинаковое значение для уникального поля).
 
         :param session: сессия SQLAlchemy
 
         :param in_objs: модели Pydantic для создания объектов
 
-        :param refresh_attribute_names: названия полей, которые нужно обновить
-        (может использоваться для подгрузки связанных полей)
-
         :param commit: нужно ли вызывать `session.commit()`, если используется
         подход commit as you go
 
-        :param attrs: дополнительные значения полей создаваемого экземпляра
-        (какие-то поля можно установить напрямую,
-        например, пользователя запроса)
+        :param returning: нужно ли возвращать созданные объекты
 
-        :returns: созданный экземпляр модели
+        :param attrs: дополнительные значения полей создаваемых экземпляров
+
+        :returns: созданные экземпляры модели или None
         """
-        if not in_objs:
-            return []
-
         create_data = [in_obj.model_dump() | attrs for in_obj in in_objs]
+        for in_obj in create_data:
+            await self.run_db_validation(session, in_obj)
 
-        stmt = insert(self.model).values(create_data).returning(self.model)
+        stmt = insert(self.model).values(create_data)
+        if returning:
+            stmt = stmt.returning(self.model)
         result = await session.execute(stmt)
         await self.save(session, commit=commit)
-
-        # Refreshing db_objs if needed
-        if refresh_attribute_names:
-            db_objs = [self.model(**data) for data in create_data]
-            for db_obj in db_objs:
-                await session.refresh(db_obj, attribute_names=refresh_attribute_names)
-            return db_objs
-        return result.scalars().all()
+        if returning:
+            return result.scalars().all()
+        return None
 
     async def get(
         self,
@@ -663,6 +670,56 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
 
+    async def bulk_update(
+        self,
+        session: AsyncSession,
+        in_obj: UpdateSchemaT | None = None,
+        ids: Iterable | None = None,
+        where: Any | None = None,
+        *,
+        commit: bool = True,
+        returning: bool = True,
+        **attrs: Any,
+    ) -> List[ModelT] | None:
+        """
+        Обновление экземпляров модели пачкой и сохранение в БД.
+        Не выполняет валидацию на уровне БД.
+
+        :param session: сессия SQLAlchemy
+
+        :param in_obj: модель Pydantic для обновления объектов
+
+        :param ids: ID обновляемых объектов (в списке, кортеже и т.д.)
+
+        :param where: фильтр для обновления объектов,
+        передаётся в метод .where() SQLAlchemy.
+        Используется, если не передан параметр :ids:
+
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
+
+        :param returning: нужно ли возвращать обновлённые объекты
+
+        :param attrs: дополнительные значения полей обновляемых экземпляров
+
+        :returns: обновлённые экземпляры модели или None
+        """
+        update_data = in_obj.model_dump() if in_obj else {}
+        update_data.update(attrs)
+
+        stmt = update(self.model).values(update_data)
+        if ids:
+            stmt = stmt.where(self.model.id.in_(ids))
+        elif where:
+            stmt = stmt.where(where)
+        if returning:
+            stmt = stmt.returning(self.model)
+        result = await session.execute(stmt)
+        await self.save(session, commit=commit)
+        if returning:
+            return result.scalars().all()
+        return None
+
     async def delete(
         self, session: AsyncSession, db_obj: ModelT, *, commit: bool = True
     ) -> ModelT:
@@ -681,6 +738,37 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await session.delete(db_obj)
         await self.save(session, commit=commit)
         return db_obj
+
+    async def bulk_delete(
+        self,
+        session: AsyncSession,
+        ids: Iterable | None = None,
+        where: Any | None = None,
+        *,
+        commit: bool = True,
+    ) -> None:
+        """
+        Удаление экземпляров модели пачкой из БД.
+
+        :param session: сессия SQLAlchemy
+
+        :param ids: ID удаляемых объектов (в списке, кортеже и т.д.)
+
+        :param where: фильтр для удаления объектов,
+        передаётся в метод .where() SQLAlchemy.
+        Используется, если не передан параметр :ids:
+
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
+
+        :returns: None
+        """
+        stmt = delete(self.model)
+        if ids:
+            stmt = stmt.where(self.model.id.in_(ids))
+        elif where:
+            stmt = stmt.where(where)
+        await self.save(session, commit=commit)
 
     ##################################################################################
     # Internal methods
@@ -824,9 +912,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             if value is None:
                 del filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                filter_expressions[
-                    filter_expression
-                ] = f"%{filter_expressions[filter_expression]}%"
+                filter_expressions[filter_expression] = (
+                    f"%{filter_expressions[filter_expression]}%"
+                )
 
     @staticmethod
     def handle_nullable_filter_expressions(
@@ -838,9 +926,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             elif value is None:
                 del nullable_filter_expressions[filter_expression]
             elif "ilike" in str(filter_expression):
-                nullable_filter_expressions[
-                    filter_expression
-                ] = f"%{nullable_filter_expressions[filter_expression]}%"
+                nullable_filter_expressions[filter_expression] = (
+                    f"%{nullable_filter_expressions[filter_expression]}%"
+                )
 
     def get_reverse_relation_filter_stmt(
         self,
