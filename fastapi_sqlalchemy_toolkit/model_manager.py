@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
-from sqlalchemy import Integer, Row, String, UniqueConstraint, func, select
+from sqlalchemy import Integer, Row, String, UniqueConstraint, func, insert, select
 from sqlalchemy.dialects.postgresql import BOOLEAN
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
@@ -151,6 +151,51 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         await self.save(session, commit=commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
+
+    async def bulk_create(
+        self,
+        session: AsyncSession,
+        in_objs: list[CreateSchemaT] | None = None,
+        refresh_attribute_names: Iterable[str] | None = None,
+        *,
+        commit: bool = True,
+        **attrs: Any,
+    ) -> list[ModelT]:
+        """
+        Создание экземпляров моделей и сохранение в БД.
+
+        :param session: сессия SQLAlchemy
+
+        :param in_objs: модели Pydantic для создания объектов
+
+        :param refresh_attribute_names: названия полей, которые нужно обновить
+        (может использоваться для подгрузки связанных полей)
+
+        :param commit: нужно ли вызывать `session.commit()`, если используется
+        подход commit as you go
+
+        :param attrs: дополнительные значения полей создаваемого экземпляра
+        (какие-то поля можно установить напрямую,
+        например, пользователя запроса)
+
+        :returns: созданный экземпляр модели
+        """
+        if not in_objs:
+            return []
+
+        create_data = [in_obj.model_dump() | attrs for in_obj in in_objs]
+
+        stmt = insert(self.model).values(create_data).returning(self.model)
+        result = await session.execute(stmt)
+        await self.save(session, commit=commit)
+
+        # Refreshing db_objs if needed
+        if refresh_attribute_names:
+            db_objs = [self.model(**data) for data in create_data]
+            for db_obj in db_objs:
+                await session.refresh(db_obj, attribute_names=refresh_attribute_names)
+            return db_objs
+        return result.scalars().all()
 
     async def get(
         self,
