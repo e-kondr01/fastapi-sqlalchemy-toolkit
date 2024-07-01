@@ -768,6 +768,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             stmt = stmt.where(self.model.id.in_(ids))
         elif where:
             stmt = stmt.where(where)
+        await session.execute(stmt)
         await self.save(session, commit=commit)
 
     ##################################################################################
