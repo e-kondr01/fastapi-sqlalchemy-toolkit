@@ -46,5 +46,10 @@ async def get_child_objects(
     ids: comma_list_query = None,
 ) -> list[ChildListSchema]
     ids = get_comma_list_values(ids, UUID)
-    return await child_manager.list(session, id=FieldFilter(ids, operator="in_"))
+    return await child_manager.list(
+        session,
+        filter_expressions={
+            Child.id.in_: ids
+        }
+    )
 ```
