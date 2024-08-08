@@ -107,7 +107,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             if hasattr(attr, "default") and attr.default is not None:
                 if isinstance(attr.default, ScalarElementColumnDefault):
                     self.defaults[attr_name] = attr.default.arg
-            elif hasattr(attr, "server_default") and attr.server_default is not None:
+            elif (
+                hasattr(attr, "server_default")
+                and attr.server_default is not None
+                and hasattr(attr.server_default, "arg")
+            ):
                 if isinstance(attr.type, BOOLEAN):
                     self.defaults[attr_name] = attr.server_default.arg != "False"
                 elif isinstance(attr.type, Integer):
