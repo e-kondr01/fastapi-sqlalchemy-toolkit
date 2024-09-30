@@ -670,7 +670,6 @@ class ModelManager[
         await self.run_db_validation(session, db_obj=db_obj, in_obj=update_data)
         for field in update_data:
             setattr(db_obj, field, update_data[field])
-        session.add(db_obj)
         await self.save(session, commit=commit)
         await session.refresh(db_obj, attribute_names=refresh_attribute_names)
         return db_obj
