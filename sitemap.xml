@@ -2,126 +2,126 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/benefits/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/benefits/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/benefits/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/db_validation/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/db_validation/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/db_validation/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/extension/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/extension/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/extension/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/filtering/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/filtering/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/filtering/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/sorting/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/sorting/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/sorting/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/transactions/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/transactions/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/transactions/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/utils/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/utils/"/>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/benefits/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/benefits/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/benefits/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/db_validation/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/db_validation/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/db_validation/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/extension/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/extension/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/extension/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/filtering/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/filtering/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/filtering/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/sorting/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/sorting/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/sorting/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/transactions/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/transactions/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/transactions/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/usage/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/usage/"/>
     </url>
     <url>
         <loc>https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/</loc>
-        <lastmod>2024-08-09</lastmod>
+        <lastmod>2024-10-04</lastmod>
         <changefreq>daily</changefreq>
         <xhtml:link rel="alternate" hreflang="ru" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/ru/utils/"/>
         <xhtml:link rel="alternate" hreflang="en" href="https://e-kondr01.github.io/fastapi-sqlalchemy-toolkit/utils/"/>
