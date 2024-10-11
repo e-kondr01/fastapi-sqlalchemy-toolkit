@@ -86,7 +86,8 @@ class ModelManager[
         self.defaults: dict[str, Any] = {}
 
         attr: InstrumentedAttribute
-        for attr_name, attr in self.model.__dict__.items():
+        model_attrs = self.model.__dict__.copy()
+        for attr_name, attr in model_attrs.items():
             # Перебираем только атрибуты модели
             if not attr_name.startswith("_"):
                 # Обрабатываем связи
