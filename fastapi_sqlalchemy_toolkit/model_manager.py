@@ -1,6 +1,6 @@
 # ruff: noqa: UP006
 from collections.abc import Callable, Iterable
-from typing import Any, List  # noqa: UP035
+from typing import Any, Generic, List, TypeVar  # noqa: UP035
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
@@ -30,6 +30,9 @@ from sqlalchemy.sql.selectable import Exists
 
 from .filters import null_query_values
 
+ModelT = TypeVar("ModelT", bound=DeclarativeBase)
+CreateSchemaT = TypeVar("CreateSchemaT", bound=BaseModel)
+UpdateSchemaT = TypeVar("UpdateSchemaT", bound=BaseModel)
 ModelDict = dict[str, Any]
 
 
@@ -39,11 +42,7 @@ def sqlalchemy_model_to_dict(model: DeclarativeBase) -> dict:
     return db_obj_dict
 
 
-class ModelManager[
-    ModelT: DeclarativeBase,
-    CreateSchemaT: BaseModel,
-    UpdateSchemaT: BaseModel,
-]:
+class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def __init__(
         self,
         model: type[ModelT],
