@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fastapi_sqlalchemy_toolkit"
-version = "0.7.8"
+version = "0.7.9"
 authors = [
   { name="Egor Kondrashov", email="e.kondr01@gmail.com" },
 ]
