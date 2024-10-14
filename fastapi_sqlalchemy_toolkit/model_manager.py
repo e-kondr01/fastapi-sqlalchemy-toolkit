@@ -667,7 +667,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         update_data = in_obj.model_dump(exclude_unset=exclude_unset) if in_obj else {}
         update_data.update(attrs)
-        await self.run_db_validation(session, db_obj=db_obj, in_obj=update_data)
+        update_data = await self.run_db_validation(session, db_obj=db_obj, in_obj=update_data)
         for field in update_data:
             setattr(db_obj, field, update_data[field])
         await self.save(session, commit=commit)
