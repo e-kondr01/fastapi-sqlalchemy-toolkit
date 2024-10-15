@@ -243,7 +243,9 @@ class ModelManager[
 
         result = await session.execute(stmt)
         if base_stmt is None:
-            return result.scalars().first()
+            if order_by is not None:
+                return result.scalars().first()
+            return result.scalar_one_or_none()
         return result.first()
 
     async def get_or_404(
