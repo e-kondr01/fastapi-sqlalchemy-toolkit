@@ -1,6 +1,6 @@
 # ruff: noqa: UP006
 from collections.abc import Callable, Iterable
-from typing import Any, Generic, List, TypeVar  # noqa: UP035
+from typing import Any, Generic, List, TypeVar, overload  # noqa: UP035
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
@@ -486,6 +486,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         *,
         unique: bool = False,
         **simple_filters: Any,
@@ -507,12 +509,24 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         список Row, а не ModelT.
 
+        :param limit: ограничение, передаётся в параметр limit запроса SQLAlchemy
+
+        :param offset: смещение, передаётся в параметр offset запроса SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
         :returns: список объектов или Row
         """
-        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(
+            base_stmt,
+            order_by,
+            options,
+            where,
+            limit=limit,
+            offset=offset,
+            **simple_filters,
+        )
         result = await session.execute(stmt)
 
         if base_stmt is None:
@@ -532,6 +546,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         options: List[Any] | Any | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         *,
         unique: bool = False,
         **simple_filters: Any,
@@ -565,6 +581,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
+        :param limit: ограничение, передаётся в параметр limit запроса SQLAlchemy
+
+        :param offset: смещение, передаётся в параметр offset запроса SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
@@ -579,7 +599,15 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.handle_nullable_filter_expressions(nullable_filter_expressions)
         filter_expressions = filter_expressions | nullable_filter_expressions
 
-        stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
+        stmt = self.assemble_stmt(
+            base_stmt,
+            order_by,
+            options,
+            where,
+            limit=limit,
+            offset=offset,
+            **simple_filters,
+        )
         stmt = self.get_joins(
             stmt,
             options=options,
@@ -669,7 +697,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         update_data = in_obj.model_dump(exclude_unset=exclude_unset) if in_obj else {}
         update_data.update(attrs)
-        update_data = await self.run_db_validation(session, db_obj=db_obj, in_obj=update_data)
+        update_data = await self.run_db_validation(
+            session, db_obj=db_obj, in_obj=update_data
+        )
         for field in update_data:
             setattr(db_obj, field, update_data[field])
         await self.save(session, commit=commit)
@@ -951,6 +981,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
+        limit: int | None = None,
+        offset: int | None = None,
         **simple_filters: Any,
     ) -> Select:
         if base_stmt is not None:
@@ -991,6 +1023,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 stmt = stmt.where(*where)
             else:
                 stmt = stmt.where(where)
+
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        if offset is not None:
+            stmt = stmt.offset(offset)
 
         return stmt
 
