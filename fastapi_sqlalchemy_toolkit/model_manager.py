@@ -746,7 +746,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         stmt = update(self.model).values(update_data)
         if ids:
             stmt = stmt.where(self.model.id.in_(ids))
-        elif where:
+        elif where is not None:
             stmt = stmt.where(where)
         if returning:
             stmt = stmt.returning(self.model)
@@ -802,7 +802,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         stmt = delete(self.model)
         if ids:
             stmt = stmt.where(self.model.id.in_(ids))
-        elif where:
+        elif where is not None:
             stmt = stmt.where(where)
         await session.execute(stmt)
         await self.save(session, commit=commit)
