@@ -216,6 +216,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
+        *,
+        unique: bool = False,
         **simple_filters: Any,
     ) -> ModelT | Row | None:
         """
@@ -234,6 +236,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         Примечание: фильтрация и сортировка по связанным моделям скорее всего
         не будут работать вместе с этим параметром.
 
+        :param unique: определяет необходимость вызова метода .unique()
+        у результата SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
@@ -242,6 +247,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
 
         result = await session.execute(stmt)
+        if unique:
+            result = result.unique()
         if base_stmt is None:
             if order_by is not None:
                 return result.scalars().first()
@@ -255,6 +262,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
         where: Any | None = None,
         base_stmt: Select | None = None,
+        *,
+        unique: bool = False,
         **simple_filters: Any,
     ) -> ModelT | Row:
         """
@@ -271,6 +280,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         экземпляр Row, а не ModelT.
 
+        :param unique: определяет необходимость вызова метода .unique()
+        у результата SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
@@ -285,6 +297,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             order_by=order_by,
             where=where,
             base_stmt=base_stmt,
+            unique=unique,
             **simple_filters,
         )
         if not db_obj:
