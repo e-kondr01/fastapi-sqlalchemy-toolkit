@@ -1,6 +1,6 @@
 # ruff: noqa: UP006
 from collections.abc import Callable, Iterable
-from typing import Any, Generic, List, TypeVar, overload  # noqa: UP035
+from typing import Any, Generic, List, TypeVar  # noqa: UP035
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
@@ -70,12 +70,17 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         if hasattr(self.model, "__table_args__"):
             for table_arg in self.model.__table_args__:
                 if isinstance(table_arg, UniqueConstraint):
-                    # Проверяем наличие атрибута postgresql_nulls_not_distinct и его значение
+                    # Проверяем наличие атрибута postgresql_nulls_not_distinct
+                    # и его значение
                     if table_arg.dialect_kwargs.get("postgresql_nulls_not_distinct"):
                         if table_arg.columns.keys():
-                            self.nullable_unique_constraints.append(table_arg.columns.keys())
+                            self.nullable_unique_constraints.append(
+                                table_arg.columns.keys()
+                            )
                         else:
-                            self.nullable_unique_constraints.append(table_arg._pending_colargs)
+                            self.nullable_unique_constraints.append(
+                                table_arg._pending_colargs
+                            )
                     else:
                         if table_arg.columns.keys():
                             self.unique_constraints.append(table_arg.columns.keys())
@@ -1103,7 +1108,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 )
 
     async def validate_nullable_unique_constraints(
-            self, session: AsyncSession, in_obj: ModelDict
+        self, session: AsyncSession, in_obj: ModelDict
     ) -> None:
         """
         Проверяет, не нарушаются ли nullable UniqueConstraint модели.
@@ -1115,7 +1120,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 continue
 
             for field in unique_constraint:
-                    query[field] = in_obj[field]
+                query[field] = in_obj[field]
             object_exists = await self.exists(
                 session, **query, where=(self.model.id != in_obj.get("id"))
             )
