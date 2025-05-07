@@ -38,7 +38,7 @@ ModelDict = dict[str, Any]
 
 def sqlalchemy_model_to_dict(model: DeclarativeBase) -> dict:
     db_obj_dict = model.__dict__.copy()
-    del db_obj_dict["_sa_instance_state"]
+    db_obj_dict.pop("_sa_instance_state", None)
     return db_obj_dict
 
 
