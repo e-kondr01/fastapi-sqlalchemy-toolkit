@@ -1075,10 +1075,16 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         Проверить, не нарушаются ли UniqueConstraint модели.
         """
         for unique_constraint in self.unique_constraints:
+            null_found = False
             query = {}
             for field in unique_constraint:
-                if in_obj[field] is not None:
-                    query[field] = in_obj[field]
+                if in_obj[field] is None:
+                    null_found = True
+                    break
+
+                query[field] = in_obj[field]
+            if null_found:
+                continue
             if query:
                 object_exists = await self.exists(
                     session, **query, where=(self.model.id != in_obj.get("id"))
