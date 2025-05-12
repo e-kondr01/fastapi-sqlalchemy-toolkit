@@ -1093,19 +1093,20 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             for field in unique_constraint:
                 if in_obj[field] is not None:
                     query[field] = in_obj[field]
-            object_exists = await self.exists(
-                session, **query, where=(self.model.id != in_obj.get("id"))
-            )
-            if object_exists:
-                conflicting_fields = ", ".join(unique_constraint)
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=(
-                        f"{self.model.__tablename__} с такими "
-                        + conflicting_fields
-                        + " уже существует."
-                    ),
+            if query:
+                object_exists = await self.exists(
+                    session, **query, where=(self.model.id != in_obj.get("id"))
                 )
+                if object_exists:
+                    conflicting_fields = ", ".join(unique_constraint)
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        detail=(
+                            f"{self.model.__tablename__} с такими "
+                            + conflicting_fields
+                            + " уже существует."
+                        ),
+                    )
 
     async def validate_nullable_unique_constraints(
         self, session: AsyncSession, in_obj: ModelDict
