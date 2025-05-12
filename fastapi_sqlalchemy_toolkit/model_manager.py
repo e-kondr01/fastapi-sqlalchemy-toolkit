@@ -65,27 +65,14 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.fk_name_to_model: dict[str, type[ModelT]] = {}
 
         self.unique_constraints: List[List[str]] = []
-        self.nullable_unique_constraints: List[List[str]] = []
 
         if hasattr(self.model, "__table_args__"):
             for table_arg in self.model.__table_args__:
                 if isinstance(table_arg, UniqueConstraint):
-                    # Проверяем наличие атрибута postgresql_nulls_not_distinct
-                    # и его значение
-                    if table_arg.dialect_kwargs.get("postgresql_nulls_not_distinct"):
-                        if table_arg.columns.keys():
-                            self.nullable_unique_constraints.append(
-                                table_arg.columns.keys()
-                            )
-                        else:
-                            self.nullable_unique_constraints.append(
-                                table_arg._pending_colargs
-                            )
+                    if table_arg.columns.keys():
+                        self.unique_constraints.append(table_arg.columns.keys())
                     else:
-                        if table_arg.columns.keys():
-                            self.unique_constraints.append(table_arg.columns.keys())
-                        else:
-                            self.unique_constraints.append(table_arg._pending_colargs)
+                        self.unique_constraints.append(table_arg._pending_colargs)
 
         self.reverse_relationships: dict[str, type[ModelT]] = {}
         self.m2m_relationships: dict[str, type[ModelT]] = {}
@@ -878,7 +865,6 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             await self.handle_m2m_fields(session, in_obj)
         await self.validate_unique_fields(session, in_obj, db_obj=db_obj)
         await self.validate_unique_constraints(session, in_obj)
-        await self.validate_nullable_unique_constraints(session, in_obj)
         return in_obj
 
     def get_select(self, base_stmt: Select | None = None, **_kwargs: Any) -> Select:
@@ -1107,34 +1093,6 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                             + " уже существует."
                         ),
                     )
-
-    async def validate_nullable_unique_constraints(
-        self, session: AsyncSession, in_obj: ModelDict
-    ) -> None:
-        """
-        Проверяет, не нарушаются ли nullable UniqueConstraint модели.
-        Поля со значением NULL игнорируются при проверке и не считаются дублированием.
-        """
-        for unique_constraint in self.nullable_unique_constraints:
-            query = {}
-            if any(in_obj[field] is None for field in unique_constraint):
-                continue
-
-            for field in unique_constraint:
-                query[field] = in_obj[field]
-            object_exists = await self.exists(
-                session, **query, where=(self.model.id != in_obj.get("id"))
-            )
-            if object_exists:
-                conflicting_fields = ", ".join(unique_constraint)
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail=(
-                        f"{self.model.__tablename__} с такими "
-                        + conflicting_fields
-                        + " уже существует."
-                    ),
-                )
 
     async def validate_unique_fields(
         self,
