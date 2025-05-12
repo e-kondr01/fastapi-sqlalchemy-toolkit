@@ -1090,10 +1090,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         for unique_constraint in self.unique_constraints:
             query = {}
+            for field in unique_constraint:
+                if in_obj[field] is not None:
+                    query[field] = in_obj[field]
             if query:
-                for field in unique_constraint:
-                    if in_obj[field] is not None:
-                        query[field] = in_obj[field]
                 object_exists = await self.exists(
                     session, **query, where=(self.model.id != in_obj.get("id"))
                 )
