@@ -1051,6 +1051,37 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         return stmt
 
+    @staticmethod
+    def get_error_msg(
+        tablename: str,
+        fields: List[str],
+        *,
+        exists: bool = True,
+        field_values: List[Any] | None = None,
+    ) -> str:
+        """
+        Формирует сообщение об ошибке, которое будет возвращаться при ошибках валидации.
+        """
+
+        error_msg = tablename
+        error_msg += " с "
+        if field_values:
+            fields_with_values = []
+            for field, value in zip(fields, field_values, strict=True):
+                fields_with_values.append(f"{field} {value}")
+            error_msg += ", ".join(fields_with_values)
+        else:
+            error_msg += "таким"
+            if len(fields) > 1:
+                error_msg += "и"
+            error_msg += " "
+            error_msg += ", ".join(fields)
+        if exists:
+            error_msg += " уже существует."
+        else:
+            error_msg += " не существует."
+        return error_msg
+
     async def validate_fk_exists(
         self, session: AsyncSession, in_obj: ModelDict
     ) -> None:
@@ -1068,9 +1099,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 if not related_object_exists:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=(
-                            f"{self.fk_name_to_model[key].__tablename__} с id "
-                            f"{in_obj[key]} не существует."
+                        detail=self.get_error_msg(
+                            self.fk_name_to_model[key].__tablename__,
+                            ["id"],
+                            field_values=[in_obj[key]],
+                            exists=False,
                         ),
                     )
 
@@ -1096,13 +1129,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     session, **query, where=(self.model.id != in_obj.get("id"))
                 )
                 if object_exists:
-                    conflicting_fields = ", ".join(unique_constraint)
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=(
-                            f"{self.model.__tablename__} с такими "
-                            + conflicting_fields
-                            + " уже существует."
+                        detail=self.get_error_msg(
+                            self.model.__tablename__, unique_constraint
                         ),
                     )
 
@@ -1132,9 +1162,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 if object_exists:
                     raise HTTPException(
                         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                        detail=(
-                            f"{self.model.__tablename__} c {column.name} "
-                            f"{in_obj[column.name]} уже существует"
+                        detail=self.get_error_msg(
+                            self.model.__tablename__,
+                            [column.name],
+                            field_values=[in_obj[column.name]],
                         ),
                     )
 
@@ -1166,10 +1197,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             if object_exists:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        f"{self.model.__tablename__} с такими "
-                        + ", ".join([column.name for column in index.columns])
-                        + " уже существует."
+                    detail=self.get_error_msg(
+                        self.model.__tablename__,
+                        [column.name for column in index.columns],
                     ),
                 )
 
@@ -1183,9 +1213,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     if not related_object:
                         raise HTTPException(
                             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                            detail=(
-                                f"{related_model.__tablename__} с id "
-                                f"{related_object_id} не существует."
+                            detail=self.get_error_msg(
+                                related_model.__tablename__,
+                                ["id"],
+                                field_values=[related_object_id],
+                                exists=False,
                             ),
                         )
                     related_objects.append(related_object)
