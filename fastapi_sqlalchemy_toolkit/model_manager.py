@@ -7,10 +7,12 @@ from fastapi_pagination.bases import BasePage
 from fastapi_pagination.ext.sqlalchemy import paginate
 from pydantic import BaseModel
 from sqlalchemy import (
+    Index,
     Integer,
     Row,
     String,
     UniqueConstraint,
+    and_,
     delete,
     func,
     insert,
@@ -65,6 +67,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self.fk_name_to_model: dict[str, type[ModelT]] = {}
 
         self.unique_constraints: List[List[str]] = []
+        self.unique_indexes: List[Index] = []
 
         if hasattr(self.model, "__table_args__"):
             for table_arg in self.model.__table_args__:
@@ -73,6 +76,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                         self.unique_constraints.append(table_arg.columns.keys())
                     else:
                         self.unique_constraints.append(table_arg._pending_colargs)
+                elif isinstance(table_arg, Index) and table_arg.unique is True:
+                    self.unique_indexes.append(table_arg)
 
         self.reverse_relationships: dict[str, type[ModelT]] = {}
         self.m2m_relationships: dict[str, type[ModelT]] = {}
@@ -865,6 +870,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             await self.handle_m2m_fields(session, in_obj)
         await self.validate_unique_fields(session, in_obj, db_obj=db_obj)
         await self.validate_unique_constraints(session, in_obj)
+        await self.validate_unique_indexes(session, in_obj)
         return in_obj
 
     def get_select(self, base_stmt: Select | None = None, **_kwargs: Any) -> Select:
@@ -1119,7 +1125,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     continue
                 attrs_to_check = {column.name: in_obj[column.name]}
                 object_exists = await self.exists(
-                    session=session,
+                    session,
                     **attrs_to_check,
                     where=(self.model.id != in_obj.get("id")),
                 )
@@ -1131,6 +1137,41 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                             f"{in_obj[column.name]} уже существует"
                         ),
                     )
+
+    async def validate_unique_indexes(
+        self, session: AsyncSession, in_obj: ModelDict
+    ) -> None:
+        """
+        Валидирует соблюдение уникальности индексов
+        """
+        for index in self.unique_indexes:
+            condition = (
+                index.dialect_options["postgresql"].get("where")
+                if index.dialect_options.get("postgresql")
+                else None
+            )
+            filters = []
+
+            for column in index.columns:
+                try:
+                    filters.append(column == in_obj[column.name])
+                except KeyError:
+                    if column.nullable:
+                        filters.append(column.is_(None))
+
+            object_exists = await self.exists(
+                session,
+                where=and_(*filters, condition, self.model.id != in_obj.get("id")),
+            )
+            if object_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"{self.model.__tablename__} с такими "
+                        + ", ".join([column.name for column in index.columns])
+                        + " уже существует."
+                    ),
+                )
 
     async def handle_m2m_fields(self, session: AsyncSession, in_obj: ModelDict) -> None:
         for field in in_obj:
