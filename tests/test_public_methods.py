@@ -288,7 +288,7 @@ async def test_create_unique_filed_validation(session: AsyncSession):
     )
     with pytest.raises(
         HTTPException,
-        match="422: category c title test-create-category-title уже существует.",
+        match="422: category с title test-create-category-title уже существует.",
     ):
         await category_manager.create(
             session=session, title="test-create-category-title"
@@ -353,7 +353,7 @@ async def test_update_unique_filed_validation(session: AsyncSession):
     )
     with pytest.raises(
         HTTPException,
-        match="422: category c title test-category-title1 уже существует.",
+        match="422: category с title test-category-title1 уже существует.",
     ):
         await category_manager.update(
             session=session,
