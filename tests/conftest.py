@@ -4,13 +4,14 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction
 
 from tests.db import async_session_factory, engine
-from tests.models import Base
+from tests.models import Base, CustomPKBase
 
 
 @pytest.fixture(autouse=True)
 async def create_metadata():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(CustomPKBase.metadata.create_all)
 
 
 @pytest.fixture(scope="session")

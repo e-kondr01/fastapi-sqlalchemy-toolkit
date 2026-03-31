@@ -1,7 +1,6 @@
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from fastapi_sqlalchemy_toolkit.model_manager import ModelManager
 from pydantic import BaseModel
 from sqlalchemy import Column, DateTime, ForeignKey, Table, UniqueConstraint, func
 from sqlalchemy.orm import (
@@ -11,6 +10,8 @@ from sqlalchemy.orm import (
     mapped_column,
     relationship,
 )
+
+from fastapi_sqlalchemy_toolkit.model_manager import ModelManager
 
 
 class Base(DeclarativeBase):
@@ -87,3 +88,27 @@ child_manager = ModelManager[Child, ChildSchema, ChildSchema](
 )
 parent_manager = ModelManager[Parent, ParentSchema, ParentSchema](Parent)
 category_manager = ModelManager[Category, CategorySchema, CategorySchema](Category)
+
+
+class CustomPKBase(DeclarativeBase):
+    @declared_attr.directive
+    def __tablename__(cls) -> str:
+        return cls.__name__.lower()
+
+
+class Item(CustomPKBase):
+    item_id: Mapped[UUID] = mapped_column(
+        primary_key=True,
+        default=uuid4,
+        server_default=func.gen_random_uuid(),
+    )
+    name: Mapped[str] = mapped_column(unique=True)
+    description: Mapped[str | None]
+
+
+class ItemSchema(BaseModel):
+    name: str
+    description: str | None = None
+
+
+item_manager = ModelManager[Item, ItemSchema, ItemSchema](Item)

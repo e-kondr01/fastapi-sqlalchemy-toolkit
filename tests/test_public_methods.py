@@ -11,10 +11,12 @@ from tests.models import (
     Category,
     CategorySchema,
     Child,
+    ItemSchema,
     Parent,
     ParentSchema,
     category_manager,
     child_manager,
+    item_manager,
     parent_manager,
 )
 
@@ -29,9 +31,9 @@ async def test_get(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "test-get-category-title")
     )
-    assert (
-        category == category_to_check.scalars().first()
-    ), "Got not equal to object in database"
+    assert category == category_to_check.scalars().first(), (
+        "Got not equal to object in database"
+    )
 
     nonexistent = await session.execute(
         select(Category).where(Category.title == "nonexistent-test-get-category-title")
@@ -277,9 +279,9 @@ async def test_create(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "test-create-category-title")
     )
-    assert (
-        created == category_to_check.scalars().first()
-    ), "Created not equal to object in database"
+    assert created == category_to_check.scalars().first(), (
+        "Created not equal to object in database"
+    )
 
 
 async def test_create_unique_filed_validation(session: AsyncSession):
@@ -337,9 +339,9 @@ async def test_update(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "UPDATED-test-update-category-title")
     )
-    assert (
-        updated == category_to_check.scalars().first()
-    ), "Updated not equal to object in database"
+    assert updated == category_to_check.scalars().first(), (
+        "Updated not equal to object in database"
+    )
 
 
 async def test_update_unique_filed_validation(session: AsyncSession):
@@ -867,3 +869,90 @@ async def test_null_filtration(session: AsyncSession):
 
     assert len(parents) == 2
     assert parents == parents_list.scalars().all()
+
+
+# ########################################################################
+# Tests for models with non-standard primary key name
+# ########################################################################
+
+
+async def test_custom_pk_create(session: AsyncSession):
+    item = await item_manager.create(
+        session, ItemSchema(name="item-1", description="desc")
+    )
+    assert item.item_id is not None
+    assert item.name == "item-1"
+
+
+async def test_custom_pk_get(session: AsyncSession):
+    item = await item_manager.create(session, ItemSchema(name="item-get"))
+    fetched = await item_manager.get(session, name="item-get")
+    assert fetched.item_id == item.item_id
+
+
+async def test_custom_pk_get_or_404(session: AsyncSession):
+    item = await item_manager.create(session, ItemSchema(name="item-404"))
+    fetched = await item_manager.get_or_404(session, name="item-404")
+    assert fetched.item_id == item.item_id
+
+    with pytest.raises(HTTPException) as exc_info:
+        await item_manager.get_or_404(session, name="nonexistent")
+    assert exc_info.value.status_code == 404
+
+
+async def test_custom_pk_exists(session: AsyncSession):
+    await item_manager.create(session, ItemSchema(name="item-exists"))
+    assert await item_manager.exists(session, name="item-exists") is True
+    assert await item_manager.exists(session, name="nonexistent") is False
+
+
+async def test_custom_pk_count(session: AsyncSession):
+    await item_manager.create(session, ItemSchema(name="item-count-1"))
+    await item_manager.create(session, ItemSchema(name="item-count-2"))
+    count = await item_manager.count(session)
+    assert count == 2
+
+
+async def test_custom_pk_update(session: AsyncSession):
+    item = await item_manager.create(session, ItemSchema(name="item-upd"))
+    updated = await item_manager.update(session, item, ItemSchema(name="item-upd-new"))
+    assert updated.name == "item-upd-new"
+    assert updated.item_id == item.item_id
+
+
+async def test_custom_pk_delete(session: AsyncSession):
+    item = await item_manager.create(session, ItemSchema(name="item-del"))
+    await item_manager.delete(session, item)
+    assert await item_manager.exists(session, name="item-del") is False
+
+
+async def test_custom_pk_bulk_update(session: AsyncSession):
+    item1 = await item_manager.create(session, ItemSchema(name="bulk-upd-1"))
+    item2 = await item_manager.create(session, ItemSchema(name="bulk-upd-2"))
+    results = await item_manager.bulk_update(
+        session, ids=[item1.item_id, item2.item_id], description="bulk-desc"
+    )
+    assert len(results) == 2
+    assert all(r.description == "bulk-desc" for r in results)
+
+
+async def test_custom_pk_bulk_delete(session: AsyncSession):
+    item1 = await item_manager.create(session, ItemSchema(name="bulk-del-1"))
+    item2 = await item_manager.create(session, ItemSchema(name="bulk-del-2"))
+    await item_manager.bulk_delete(session, ids=[item1.item_id, item2.item_id])
+    assert await item_manager.count(session) == 0
+
+
+async def test_custom_pk_unique_validation(session: AsyncSession):
+    await item_manager.create(session, ItemSchema(name="unique-item"))
+    with pytest.raises(HTTPException) as exc_info:
+        await item_manager.create(session, ItemSchema(name="unique-item"))
+    assert exc_info.value.status_code == 422
+
+
+async def test_custom_pk_unique_validation_on_update(session: AsyncSession):
+    item1 = await item_manager.create(session, ItemSchema(name="upd-unique-1"))
+    await item_manager.create(session, ItemSchema(name="upd-unique-2"))
+    with pytest.raises(HTTPException) as exc_info:
+        await item_manager.update(session, item1, ItemSchema(name="upd-unique-2"))
+    assert exc_info.value.status_code == 422

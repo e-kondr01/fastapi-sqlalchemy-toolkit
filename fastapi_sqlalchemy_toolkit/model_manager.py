@@ -44,6 +44,12 @@ def sqlalchemy_model_to_dict(model: DeclarativeBase) -> dict:
     return db_obj_dict
 
 
+def _get_model_pk(model: type[DeclarativeBase]) -> InstrumentedAttribute:
+    """Получить атрибут первичного ключа для произвольной модели."""
+    pk_columns = list(model.__table__.primary_key.columns)
+    return getattr(model, pk_columns[0].name)
+
+
 class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def __init__(
         self,
@@ -60,6 +66,15 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         self.model = model
         self.default_ordering = default_ordering
+
+        # Introspect primary key
+        pk_columns = list(self.model.__table__.primary_key.columns)
+        if len(pk_columns) != 1:
+            raise ValueError(
+                f"{self.model.__name__} has a composite primary key, "
+                f"which is not supported by ModelManager."
+            )
+        self.pk_column: InstrumentedAttribute = getattr(self.model, pk_columns[0].name)
 
         # str() of FK attr to related model
         # "parent_id": <class app.models.parent.Parent>
@@ -79,7 +94,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 elif isinstance(table_arg, Index) and table_arg.unique is True:
                     self.unique_indexes.append(table_arg)
 
+        # str of reverse relationship to its Model
+        # "parents": <class app.models.parent.Parent>
         self.reverse_relationships: dict[str, type[ModelT]] = {}
+        # str of M2M relationship to its Model
+        # "parents": <class app.models.parent.Parent>
         self.m2m_relationships: dict[str, type[ModelT]] = {}
         # Model to related attr
         # Parent : Child.parent
@@ -340,7 +359,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :returns: True если объект существует, иначе False
         """
         stmt = self.assemble_stmt(
-            select(self.model.id), None, options, where, **simple_filters
+            select(self.pk_column), None, options, where, **simple_filters
         )
         result = await session.execute(stmt)
         return result.first() is not None
@@ -666,8 +685,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :returns: количество объектов по переданным фильтрам
         """
-        # TODO: reference primary key instead of hardcode model.id
-        stmt = select(func.count(self.model.id))
+        stmt = select(func.count(self.pk_column))
         if where is not None:
             stmt = stmt.where(where)
         if simple_filters:
@@ -764,7 +782,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         stmt = update(self.model).values(update_data)
         if ids:
-            stmt = stmt.where(self.model.id.in_(ids))
+            stmt = stmt.where(self.pk_column.in_(ids))
         elif where is not None:
             stmt = stmt.where(where)
         if returning:
@@ -820,7 +838,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         """
         stmt = delete(self.model)
         if ids:
-            stmt = stmt.where(self.model.id.in_(ids))
+            stmt = stmt.where(self.pk_column.in_(ids))
         elif where is not None:
             stmt = stmt.where(where)
         await session.execute(stmt)
@@ -993,7 +1011,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         value: Any,
     ) -> Exists:
         relationship: InstrumentedAttribute = getattr(self.model, field_name)
-        return relationship.any(self.reverse_relationships[field_name].id.in_(value))
+        related_model = self.reverse_relationships[field_name]
+        related_pk = _get_model_pk(related_model)
+        return relationship.any(related_pk.in_(value))
 
     def assemble_stmt(
         self,
@@ -1091,17 +1111,19 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         for key in in_obj:
             if key in self.fk_name_to_model and in_obj[key] is not None:
+                related_model = self.fk_name_to_model[key]
+                related_pk = _get_model_pk(related_model)
                 related_object_exists = await session.get(
-                    self.fk_name_to_model[key],
+                    related_model,
                     in_obj[key],
-                    options=[load_only(self.fk_name_to_model[key].id)],
+                    options=[load_only(related_pk)],
                 )
                 if not related_object_exists:
                     raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail=self.get_error_msg(
-                            self.fk_name_to_model[key].__tablename__,
-                            ["id"],
+                            related_model.__tablename__,
+                            [related_pk.name],
                             field_values=[in_obj[key]],
                             exists=False,
                         ),
@@ -1126,11 +1148,13 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 continue
             if query:
                 object_exists = await self.exists(
-                    session, **query, where=(self.model.id != in_obj.get("id"))
+                    session,
+                    **query,
+                    where=(self.pk_column != in_obj.get(self.pk_column.name)),
                 )
                 if object_exists:
                     raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail=self.get_error_msg(
                             self.model.__tablename__, unique_constraint
                         ),
@@ -1157,11 +1181,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 object_exists = await self.exists(
                     session,
                     **attrs_to_check,
-                    where=(self.model.id != in_obj.get("id")),
+                    where=(self.pk_column != in_obj.get(self.pk_column.name)),
                 )
                 if object_exists:
                     raise HTTPException(
-                        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                         detail=self.get_error_msg(
                             self.model.__tablename__,
                             [column.name],
@@ -1192,7 +1216,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
             object_exists = await self.exists(
                 session,
-                where=and_(*filters, condition, self.model.id != in_obj.get("id")),
+                where=and_(
+                    *filters,
+                    condition,
+                    self.pk_column != in_obj.get(self.pk_column.name),
+                ),
             )
             if object_exists:
                 raise HTTPException(
@@ -1212,7 +1240,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                     related_object = await session.get(related_model, related_object_id)
                     if not related_object:
                         raise HTTPException(
-                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                             detail=self.get_error_msg(
                                 related_model.__tablename__,
                                 ["id"],
