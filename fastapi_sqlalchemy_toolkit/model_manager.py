@@ -1,6 +1,6 @@
 # ruff: noqa: UP006
 from collections.abc import Callable, Iterable
-from typing import Any, Generic, List, TypeVar  # noqa: UP035
+from typing import Any, Generic, List, TypeVar, overload  # noqa: UP035
 
 from fastapi import HTTPException, status
 from fastapi_pagination.bases import BasePage
@@ -234,6 +234,32 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             return result.scalars().all()
         return None
 
+    @overload
+    async def get(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = ...,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> ModelT | None: ...
+
+    @overload
+    async def get(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = ...,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> Row | None: ...
+
     async def get(
         self,
         session: AsyncSession,
@@ -279,6 +305,32 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 return result.scalars().first()
             return result.scalar_one_or_none()
         return result.first()
+
+    @overload
+    async def get_or_404(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = ...,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> ModelT: ...
+
+    @overload
+    async def get_or_404(
+        self,
+        session: AsyncSession,
+        options: List[Any] | Any | None = ...,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> Row: ...
 
     async def get_or_404(
         self,
@@ -407,6 +459,30 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             )
         return True
 
+    @overload
+    async def paginated_filter(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        transformer: Callable | None = ...,
+        **simple_filters: Any,
+    ) -> BasePage[ModelT]: ...
+
+    @overload
+    async def paginated_filter(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        transformer: Callable | None = ...,
+        **simple_filters: Any,
+    ) -> BasePage[Row]: ...
+
     async def paginated_filter(
         self,
         session: AsyncSession,
@@ -416,7 +492,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         base_stmt: Select | None = None,
         transformer: Callable | None = None,
         **simple_filters: Any,
-    ) -> BasePage[ModelT | Row]:
+    ) -> BasePage[Any]:
         """
         Получение списка объектов с фильтрами и пагинацией.
 
@@ -443,6 +519,38 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         stmt = self.assemble_stmt(base_stmt, order_by, options, where, **simple_filters)
         return await paginate(session, stmt, transformer=transformer)
 
+    @overload
+    async def paginated_list(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = ...,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        transformer: Callable | None = ...,
+        **simple_filters: Any,
+    ) -> BasePage[ModelT]: ...
+
+    @overload
+    async def paginated_list(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = ...,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        transformer: Callable | None = ...,
+        **simple_filters: Any,
+    ) -> BasePage[Row]: ...
+
     async def paginated_list(
         self,
         session: AsyncSession,
@@ -456,7 +564,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         base_stmt: Select | None = None,
         transformer: Callable | None = None,
         **simple_filters: Any,
-    ) -> BasePage[ModelT | Row]:
+    ) -> BasePage[Any]:
         """
         Получение списка объектов с фильтрами и пагинацией.
         Пропускает фильтры, значения которых None.
@@ -517,6 +625,36 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         return await paginate(session, stmt, transformer=transformer)
 
+    @overload
+    async def filter(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        limit: int | None = ...,
+        offset: int | None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> List[ModelT]: ...
+
+    @overload
+    async def filter(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        limit: int | None = ...,
+        offset: int | None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> List[Row]: ...
+
     async def filter(
         self,
         session: AsyncSession,
@@ -529,7 +667,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         *,
         unique: bool = False,
         **simple_filters: Any,
-    ) -> List[ModelT] | List[Row]:
+    ) -> List[Any]:
         """
         Получение списка объектов с фильтрами
 
@@ -573,6 +711,44 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             return result.scalars().all()
         return result.all()
 
+    @overload
+    async def list(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = ...,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: None = ...,
+        limit: int | None = ...,
+        offset: int | None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> List[ModelT]: ...
+
+    @overload
+    async def list(
+        self,
+        session: AsyncSession,
+        order_by: InstrumentedAttribute | UnaryExpression | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable, Any] | None = ...,
+        nullable_filter_expressions: (
+            dict[InstrumentedAttribute | Callable, Any] | None
+        ) = ...,
+        options: List[Any] | Any | None = ...,
+        where: Any | None = ...,
+        base_stmt: Select = ...,
+        limit: int | None = ...,
+        offset: int | None = ...,
+        *,
+        unique: bool = ...,
+        **simple_filters: Any,
+    ) -> List[Row]: ...
+
     async def list(
         self,
         session: AsyncSession,
@@ -589,7 +765,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         *,
         unique: bool = False,
         **simple_filters: Any,
-    ) -> List[ModelT] | List[Row]:
+    ) -> List[Any]:
         """
         Получение списка объектов с фильтрами.
         Пропускает фильтры, значения которых None.
