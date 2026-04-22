@@ -25,7 +25,6 @@ from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.base import _entity_namespace
 from sqlalchemy.sql.elements import UnaryExpression
 from sqlalchemy.sql.expression import BinaryExpression, ColumnElement
 from sqlalchemy.sql.functions import Function
@@ -526,9 +525,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = ...,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = ...,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = ...,
@@ -544,9 +542,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = ...,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = ...,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = ...,
@@ -561,9 +558,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = None,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = None,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = None,
@@ -628,7 +624,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         for filter_expression, value in filter_expressions.items():
             if isinstance(
                 filter_expression,
-                InstrumentedAttribute | Function | BinaryExpression | ColumnElement
+                InstrumentedAttribute | Function | BinaryExpression | ColumnElement,
             ):
                 stmt = stmt.filter(filter_expression == value)
             else:
@@ -727,9 +723,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = ...,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = ...,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = ...,
@@ -748,9 +743,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = ...,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = ...,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = ...,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = ...,
@@ -768,9 +762,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         self,
         session: AsyncSession,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ] | None = None,
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any]
+        | None = None,
         nullable_filter_expressions: (
             dict[InstrumentedAttribute | Callable, Any] | None
         ) = None,
@@ -849,7 +842,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         for filter_expression, value in filter_expressions.items():
             if isinstance(
                 filter_expression,
-                InstrumentedAttribute | BinaryExpression | ColumnElement
+                InstrumentedAttribute | BinaryExpression | ColumnElement,
             ):
                 stmt = stmt.filter(filter_expression == value)
             else:
@@ -1095,9 +1088,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     def get_joins(
         self,
         base_query: Select,
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ],
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any],
         options: List[Any] | None = None,
         order_by: InstrumentedAttribute | UnaryExpression | None = None,
     ) -> Select:
@@ -1130,8 +1121,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 model = filter_expression.parent._identity_class
             elif isinstance(filter_expression, Function):
                 model = filter_expression.entity_namespace
+            elif isinstance(filter_expression, ColumnElement):
+                model = self.model  # Not supported
             else:
-                model = _entity_namespace(filter_expression)
+                model = filter_expression.__self__.parent._identity_class
             if model != self.model:
                 models_to_join.add(model)
         for model in models_to_join:
@@ -1179,9 +1172,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
     @staticmethod
     def handle_filter_expressions(
-        filter_expressions: dict[
-            InstrumentedAttribute | Callable | ColumnElement, Any
-        ],
+        filter_expressions: dict[InstrumentedAttribute | Callable | ColumnElement, Any],
     ) -> None:
         for filter_expression, value in filter_expressions.copy().items():
             if value is None:
