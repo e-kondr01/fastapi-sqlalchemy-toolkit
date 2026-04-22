@@ -206,6 +206,80 @@ Unlike the `list` method, the `filter` method:
 2. Does not have the `filter_expressions` parameter, i.e., it will not perform `join`,
     necessary for filtering by fields of related models.
 
+### Filtering with optional expressions
+
+The `optional_where` parameter of the `list` and `paginated_list` methods accepts
+SQLAlchemy expressions that may contain `None` values. Filters with a `None` value
+are automatically skipped.
+
+This is useful in list API endpoints where filtering is optional — if the query parameter
+is not provided (i.e., its value is `None`), the filter is not applied.
+
+The `optional_where` parameter supports three kinds of expressions:
+
+**Case 1: Simple expression** (`MyModel.field == value`)
+
+If `value` is `None`, the filter is skipped entirely. Otherwise it is applied as-is.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title),
+    )
+```
+
+`GET /parents` — no filter applied, all `Parent` objects are returned.
+
+`GET /parents?title=foo` — only `Parent` objects with `title = 'foo'` are returned.
+
+**Case 2: Function or operator expression** (`func.date(MyModel.field) == value`, `MyModel.field.ilike(value)`)
+
+Same behaviour as Case 1 — if `value` is `None`, the filter is skipped.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    created_at_date: date | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(func.date(Parent.created_at) == created_at_date),
+    )
+```
+
+**Case 3: Compound expression with `&` or `|`** (`(expr1) & (expr2)`, `(expr1) | (expr2)`)
+
+Sub-expressions whose values are `None` are excluded. The remaining sub-expressions
+are combined using the original operator (`&` or `|`). If all values are `None`,
+the filter is skipped entirely.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+    slug: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title) & (Parent.slug == slug),
+    )
+```
+
+`GET /parents` — no filter applied, all `Parent` objects are returned.
+
+`GET /parents?title=foo` — only the `title` filter is applied.
+
+`GET /parents?title=foo&slug=bar` — both filters are applied with `AND`.
+
+> **Note**: nesting of compound expressions (e.g. `(a & b) | c`) is not supported.
+
 ### Filtering by `null` via API
 
 If in a list API endpoint, you need to be able to filter the field value

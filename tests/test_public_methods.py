@@ -31,9 +31,9 @@ async def test_get(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "test-get-category-title")
     )
-    assert category == category_to_check.scalars().first(), (
-        "Got not equal to object in database"
-    )
+    assert (
+        category == category_to_check.scalars().first()
+    ), "Got not equal to object in database"
 
     nonexistent = await session.execute(
         select(Category).where(Category.title == "nonexistent-test-get-category-title")
@@ -279,9 +279,9 @@ async def test_create(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "test-create-category-title")
     )
-    assert created == category_to_check.scalars().first(), (
-        "Created not equal to object in database"
-    )
+    assert (
+        created == category_to_check.scalars().first()
+    ), "Created not equal to object in database"
 
 
 async def test_create_unique_filed_validation(session: AsyncSession):
@@ -339,9 +339,9 @@ async def test_update(session: AsyncSession):
     category_to_check = await session.execute(
         select(Category).where(Category.title == "UPDATED-test-update-category-title")
     )
-    assert updated == category_to_check.scalars().first(), (
-        "Updated not equal to object in database"
-    )
+    assert (
+        updated == category_to_check.scalars().first()
+    ), "Updated not equal to object in database"
 
 
 async def test_update_unique_filed_validation(session: AsyncSession):
@@ -727,6 +727,267 @@ async def test_list_with_where(session: AsyncSession):
     assert len(parents) == 2, "Incorrect result amount"
     for parent in parents:
         assert parent.title == same_title
+
+
+# ########################################################################
+# Tests for optional_where parameter
+# ########################################################################
+
+
+async def test_list_with_optional_where_case1_applied(session: AsyncSession):
+    """Case 1: simple expression, value is not None — filter is applied."""
+    target_title = "optional-where-title-target"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": "optional-where-slug1",
+            },
+            {
+                "title": "optional-where-title-other",
+                "slug": "optional-where-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title),
+    )
+    assert len(parents) == 1
+    assert parents[0].title == target_title
+
+
+async def test_list_with_optional_where_case1_skipped(session: AsyncSession):
+    """Case 1: simple expression, value is None — filter is skipped (all returned)."""
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-title-1",
+                "slug": "optional-where-slug1",
+            },
+            {
+                "title": "optional-where-title-2",
+                "slug": "optional-where-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == none_value),
+    )
+    assert len(parents) == 2
+
+
+async def test_list_with_optional_where_case2_applied(session: AsyncSession):
+    """Case 2: func expression, value is not None — filter is applied."""
+    from sqlalchemy import func
+
+    target_slug = "optional-where-func-slug1"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-func-title-1",
+                "slug": target_slug,
+            },
+            {
+                "title": "optional-where-func-title-2",
+                "slug": "optional-where-func-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    # Use func.lower() on the slug to simulate a function expression
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(func.lower(Parent.slug) == target_slug),
+    )
+    assert len(parents) == 1
+    assert parents[0].slug == target_slug
+
+
+async def test_list_with_optional_where_case2_skipped(session: AsyncSession):
+    """Case 2: func expression, value is None — filter is skipped (all returned)."""
+    from sqlalchemy import func
+
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-func-title-1",
+                "slug": "optional-where-func-slug1",
+            },
+            {
+                "title": "optional-where-func-title-2",
+                "slug": "optional-where-func-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(func.lower(Parent.slug) == none_value),
+    )
+    assert len(parents) == 2
+
+
+async def test_list_with_optional_where_case3_and_both_applied(session: AsyncSession):
+    """Case 3: compound & expression, both values not None — both filters applied."""
+    target_title = "optional-where-and-title"
+    target_slug = "optional-where-and-slug1"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": target_slug,
+            },
+            {
+                "title": target_title,
+                "slug": "optional-where-and-slug2",
+            },
+            {
+                "title": "optional-where-and-title-other",
+                "slug": "optional-where-and-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title) & (Parent.slug == target_slug),
+    )
+    assert len(parents) == 1
+    assert parents[0].title == target_title
+    assert parents[0].slug == target_slug
+
+
+async def test_list_with_optional_where_case3_and_one_none(session: AsyncSession):
+    """Case 3: compound & expression, one value is None — only non-None filter applied."""
+    target_title = "optional-where-one-none-title"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": "optional-where-one-none-slug1",
+            },
+            {
+                "title": target_title,
+                "slug": "optional-where-one-none-slug2",
+            },
+            {
+                "title": "optional-where-one-none-title-other",
+                "slug": "optional-where-one-none-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title) & (Parent.slug == none_value),
+    )
+    assert len(parents) == 2
+    for parent in parents:
+        assert parent.title == target_title
+
+
+async def test_list_with_optional_where_case3_all_none(session: AsyncSession):
+    """Case 3: compound expression, all values are None — filter skipped (all returned)."""
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-all-none-title-1",
+                "slug": "optional-where-all-none-slug1",
+            },
+            {
+                "title": "optional-where-all-none-title-2",
+                "slug": "optional-where-all-none-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == none_value) & (Parent.slug == none_value),
+    )
+    assert len(parents) == 2
+
+
+async def test_list_with_optional_where_case3_or_both_applied(session: AsyncSession):
+    """Case 3: compound | expression, both values not None — both filters applied as OR."""
+    title_a = "optional-where-or-title-a"
+    title_b = "optional-where-or-title-b"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": title_a,
+                "slug": "optional-where-or-slug1",
+            },
+            {
+                "title": title_b,
+                "slug": "optional-where-or-slug2",
+            },
+            {
+                "title": "optional-where-or-title-other",
+                "slug": "optional-where-or-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == title_a) | (Parent.title == title_b),
+    )
+    assert len(parents) == 2
+    titles = {p.title for p in parents}
+    assert title_a in titles
+    assert title_b in titles
+
+
+async def test_list_with_optional_where_case3_or_one_none(session: AsyncSession):
+    """Case 3: compound | expression, one value is None — only non-None filter applied."""
+    target_title = "optional-where-or-none-title"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": "optional-where-or-none-slug1",
+            },
+            {
+                "title": "optional-where-or-none-title-other",
+                "slug": "optional-where-or-none-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title) | (Parent.slug == none_value),
+    )
+    assert len(parents) == 1
+    assert parents[0].title == target_title
 
 
 async def test_create_unique_constraint_validation(session: AsyncSession):

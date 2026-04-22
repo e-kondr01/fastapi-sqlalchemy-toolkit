@@ -16,6 +16,7 @@ from sqlalchemy import (
     delete,
     func,
     insert,
+    or_,
     select,
     update,
 )
@@ -25,7 +26,7 @@ from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import UnaryExpression
+from sqlalchemy.sql.elements import Null, UnaryExpression
 from sqlalchemy.sql.expression import BinaryExpression, ColumnElement
 from sqlalchemy.sql.functions import Function
 from sqlalchemy.sql.schema import ScalarElementColumnDefault
@@ -532,6 +533,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = ...,
         options: List[Any] | Any | None = ...,
         where: Any | None = ...,
+        optional_where: Any | None = ...,
         base_stmt: None = ...,
         transformer: Callable | None = ...,
         **simple_filters: Any,
@@ -549,6 +551,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = ...,
         options: List[Any] | Any | None = ...,
         where: Any | None = ...,
+        optional_where: Any | None = ...,
         base_stmt: Select = ...,
         transformer: Callable | None = ...,
         **simple_filters: Any,
@@ -565,6 +568,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
+        optional_where: Any | None = None,
         base_stmt: Select | None = None,
         transformer: Callable | None = None,
         **simple_filters: Any,
@@ -589,6 +593,12 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param optional_where: выражение SQLAlchemy, в котором фильтры со значением None
+        пропускаются. Поддерживает простые выражения (MyModel.field == value),
+        выражения с функциями (func.date(MyModel.field) == value) и составные
+        выражения через & или | ((expr1) & (expr2)). См. раздел "фильтрация"
+        в документации.
 
         :param base_stmt: объект Select для SQL запроса. Если передан, то метод вернёт
         страницу Row, а не ModelT.
@@ -629,6 +639,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 stmt = stmt.filter(filter_expression == value)
             else:
                 stmt = stmt.filter(filter_expression(value))
+
+        processed_optional_where = self.handle_optional_where(optional_where)
+        if processed_optional_where is not None:
+            stmt = stmt.where(processed_optional_where)
 
         return await paginate(session, stmt, transformer=transformer)
 
@@ -730,6 +744,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = ...,
         options: List[Any] | Any | None = ...,
         where: Any | None = ...,
+        optional_where: Any | None = ...,
         base_stmt: None = ...,
         limit: int | None = ...,
         offset: int | None = ...,
@@ -750,6 +765,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = ...,
         options: List[Any] | Any | None = ...,
         where: Any | None = ...,
+        optional_where: Any | None = ...,
         base_stmt: Select = ...,
         limit: int | None = ...,
         offset: int | None = ...,
@@ -769,6 +785,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         ) = None,
         options: List[Any] | Any | None = None,
         where: Any | None = None,
+        optional_where: Any | None = None,
         base_stmt: Select | None = None,
         limit: int | None = None,
         offset: int | None = None,
@@ -796,6 +813,12 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         :param options: параметры для метода .options() загрузчика SQLAlchemy
 
         :param where: выражение, которое будет передано в метод .where() SQLAlchemy
+
+        :param optional_where: выражение SQLAlchemy, в котором фильтры со значением None
+        пропускаются. Поддерживает простые выражения (MyModel.field == value),
+        выражения с функциями (func.date(MyModel.field) == value) и составные
+        выражения через & или | ((expr1) & (expr2)). См. раздел "фильтрация"
+        в документации.
 
         :param unique: определяет необходимость вызова метода .unique()
         у результата SQLAlchemy
@@ -847,6 +870,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 stmt = stmt.filter(filter_expression == value)
             else:
                 stmt = stmt.filter(filter_expression(value))
+
+        processed_optional_where = self.handle_optional_where(optional_where)
+        if processed_optional_where is not None:
+            stmt = stmt.where(processed_optional_where)
 
         result = await session.execute(stmt)
 
@@ -1207,6 +1234,44 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         related_model = self.reverse_relationships[field_name]
         related_pk = _get_model_pk(related_model)
         return relationship.any(related_pk.in_(value))
+
+    @staticmethod
+    def handle_optional_where(optional_where: Any) -> Any:
+        """
+        Обрабатывает выражение optional_where, пропуская фильтры, значения которых None.
+
+        Поддерживает:
+        1. Простые выражения вида MyModel.field == value
+        2. Выражения с функциями/операторами вида func.date(MyModel.field) == value
+        3. Составные выражения вида (expr1) & (expr2) или (expr1) | (expr2)
+           (без вложенности)
+
+        Если value равно None, фильтр не применяется.
+        В составных выражениях исключаются части с value == None,
+        при этом оператор & или | сохраняется.
+        """
+        if optional_where is None:
+            return None
+
+        # compound expression (& or |) — has .clauses attribute
+        if hasattr(optional_where, "clauses"):
+            remaining = [
+                clause
+                for clause in optional_where.clauses
+                if not isinstance(clause.right, Null)
+            ]
+            if not remaining:
+                return None
+            if len(remaining) == 1:
+                return remaining[0]
+            if optional_where.operator.__name__ == "and_":
+                return and_(*remaining)
+            return or_(*remaining)
+
+        # simple binary expression
+        if isinstance(getattr(optional_where, "right", None), Null):
+            return None
+        return optional_where
 
     def assemble_stmt(
         self,

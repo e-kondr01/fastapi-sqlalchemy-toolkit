@@ -77,7 +77,9 @@ WHERE child.slug = :slug_1
 а не только те, у которых `slug is null`. Поэтому метод `list` (`paginated_list`) отбрасывает фильтрацию
 по этому параметру, если его значение не передано.
 
-## Более сложная фильтрация
+## Фильтрация с выражениями
+
+### filter_expressions
 
 Чтобы использовать фильтрацию не только по точному соответствию атрибуту модели,
 в методах `list` и `paginated_list` можно передать параметр `filter_expressions`.
@@ -181,6 +183,79 @@ WHERE lower(parent.title) LIKE lower(:title_1)
  необходимые для фильтрации `join` будут сделаны автоматически.
 **Важно**: работает только для моделей, напрямую связанных с основной, и только тогда, когда
 эти модели связывает единственный внешний ключ.
+
+### optional_where
+
+Параметр `optional_where` методов `list` и `paginated_list` принимает выражения SQLAlchemy,
+в которых значения фильтров могут быть `None`. Фильтры со значением `None` автоматически пропускаются.
+
+Это удобно использовать в списочных API эндпоинтах, где фильтрация необязательна —
+если параметр запроса не передан (т. е. его значение `None`), фильтр не применяется.
+
+Параметр `optional_where` поддерживает три вида выражений:
+
+**Кейс 1: Простое выражение** (`MyModel.field == value`)
+
+Если `value` равно `None`, фильтр пропускается. Иначе применяется как есть.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title),
+    )
+```
+
+Запрос `GET /parents` — фильтр не применяется, возвращаются все объекты `Parent`.
+
+Запрос `GET /parents?title=foo` — возвращаются только объекты `Parent` с `title = 'foo'`.
+
+**Кейс 2: Выражение с функцией или оператором** (`func.date(MyModel.field) == value`, `MyModel.field.ilike(value)`)
+
+Аналогично кейсу 1 — если `value` равно `None`, фильтр пропускается.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    created_at_date: date | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(func.date(Parent.created_at) == created_at_date),
+    )
+```
+
+**Кейс 3: Составное выражение через `&` или `|`** (`(expr1) & (expr2)`, `(expr1) | (expr2)`)
+
+Части выражения, значения которых равны `None`, исключаются. Оставшиеся части объединяются
+с использованием исходного оператора (`&` или `|`). Если все значения `None`,
+фильтр пропускается полностью.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+    slug: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title) & (Parent.slug == slug),
+    )
+```
+
+Запрос `GET /parents` — фильтр не применяется, возвращаются все объекты `Parent`.
+
+Запрос `GET /parents?title=foo` — применяется только фильтр по `title`.
+
+Запрос `GET /parents?title=foo&slug=bar` — применяются оба фильтра через `AND`.
+
+> **Примечание**: вложенные составные выражения (например, `(a & b) | c`) не поддерживаются.
 
 ## Фильтрация без дополнительной обработки
 
