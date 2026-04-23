@@ -257,6 +257,31 @@ async def get_parents(
 
 > **Примечание**: вложенные составные выражения (например, `(a & b) | c`) не поддерживаются.
 
+**Несколько выражений как отдельные аргументы**
+
+Вместо использования `&` для объединения выражений можно передать их как отдельные
+аргументы в виде кортежа. Каждый аргумент поддерживает все три вида выражений выше.
+Оставшиеся (не-`None`) выражения объединяются через `AND`.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+    slug: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title, Parent.slug == slug),
+    )
+```
+
+Запрос `GET /parents` — фильтр не применяется, возвращаются все объекты `Parent`.
+
+Запрос `GET /parents?title=foo` — применяется только фильтр по `title`.
+
+Запрос `GET /parents?title=foo&slug=bar` — применяются оба фильтра через `AND`.
+
 ## Фильтрация без дополнительной обработки
 
 Для фильтрации без дополнительной обработки в методах `list` и `paginated_list` можно

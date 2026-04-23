@@ -280,6 +280,31 @@ async def get_parents(
 
 > **Note**: nesting of compound expressions (e.g. `(a & b) | c`) is not supported.
 
+**Multiple expressions as separate arguments**
+
+Instead of using `&` to combine expressions, you can pass them as separate arguments
+in a tuple. Each argument supports all three expression kinds above. Non-`None`
+expressions are combined with `AND`.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    title: str | None = None,
+    slug: str | None = None,
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=(Parent.title == title, Parent.slug == slug),
+    )
+```
+
+`GET /parents` — no filter applied, all `Parent` objects are returned.
+
+`GET /parents?title=foo` — only the `title` filter is applied.
+
+`GET /parents?title=foo&slug=bar` — both filters are applied with `AND`.
+
 ### Filtering by `null` via API
 
 If in a list API endpoint, you need to be able to filter the field value

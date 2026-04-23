@@ -1235,10 +1235,10 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         related_pk = _get_model_pk(related_model)
         return relationship.any(related_pk.in_(value))
 
-    @staticmethod
-    def handle_optional_where(optional_where: Any) -> Any:
+    @classmethod
+    def handle_optional_where_expression(cls, optional_where: Any) -> Any:
         """
-        Обрабатывает выражение optional_where, пропуская фильтры, значения которых None.
+        Обрабатывает одно выражение optional_where, пропуская фильтр, если его значение None.
 
         Поддерживает:
         1. Простые выражения вида MyModel.field == value
@@ -1272,6 +1272,30 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         if isinstance(getattr(optional_where, "right", None), Null):
             return None
         return optional_where
+
+    @classmethod
+    def handle_optional_where(cls, optional_where: Any) -> Any:
+        """
+        Обрабатывает выражения optional_where, пропуская фильтры, значения которых None.
+
+        Принимает одно выражение SQLAlchemy или кортеж выражений.
+        Каждое выражение обрабатывается через handle_optional_where_expression
+        и поддерживает все три вида выражений.
+        При передаче кортежа оставшиеся (не-None) выражения
+        объединяются через оператор &.
+        """
+        if isinstance(optional_where, tuple):
+            remaining = []
+            for arg in optional_where:
+                processed = cls.handle_optional_where_expression(arg)
+                if processed is not None:
+                    remaining.append(processed)
+            if not remaining:
+                return None
+            if len(remaining) == 1:
+                return remaining[0]
+            return and_(*remaining)
+        return cls.handle_optional_where_expression(optional_where)
 
     def assemble_stmt(
         self,
@@ -1317,10 +1341,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             stmt = stmt.options(option)
 
         if where is not None:
-            if isinstance(where, tuple):
-                stmt = stmt.where(*where)
-            else:
-                stmt = stmt.where(where)
+            stmt = stmt.where(*where) if isinstance(where, tuple) else stmt.where(where)
 
         if limit is not None:
             stmt = stmt.limit(limit)

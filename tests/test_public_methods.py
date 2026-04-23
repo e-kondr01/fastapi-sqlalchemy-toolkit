@@ -990,6 +990,95 @@ async def test_list_with_optional_where_case3_or_one_none(session: AsyncSession)
     assert parents[0].title == target_title
 
 
+async def test_list_with_optional_where_multi_all_applied(session: AsyncSession):
+    """Multi-arg: both values not None — both filters applied with AND."""
+    target_title = "optional-where-multi-title"
+    target_slug = "optional-where-multi-slug1"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": target_slug,
+            },
+            {
+                "title": target_title,
+                "slug": "optional-where-multi-slug2",
+            },
+            {
+                "title": "optional-where-multi-title-other",
+                "slug": "optional-where-multi-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title, Parent.slug == target_slug),
+    )
+    assert len(parents) == 1
+    assert parents[0].title == target_title
+    assert parents[0].slug == target_slug
+
+
+async def test_list_with_optional_where_multi_one_none(session: AsyncSession):
+    """Multi-arg: one value is None — only non-None filter applied."""
+    target_title = "optional-where-multi-none-title"
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": target_title,
+                "slug": "optional-where-multi-none-slug1",
+            },
+            {
+                "title": target_title,
+                "slug": "optional-where-multi-none-slug2",
+            },
+            {
+                "title": "optional-where-multi-none-title-other",
+                "slug": "optional-where-multi-none-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title, Parent.slug == none_value),
+    )
+    assert len(parents) == 2
+    for parent in parents:
+        assert parent.title == target_title
+
+
+async def test_list_with_optional_where_multi_all_none(session: AsyncSession):
+    """Multi-arg: all values are None — filter skipped (all returned)."""
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-multi-all-none-title-1",
+                "slug": "optional-where-multi-all-none-slug1",
+            },
+            {
+                "title": "optional-where-multi-all-none-title-2",
+                "slug": "optional-where-multi-all-none-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    none_value = None
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == none_value, Parent.slug == none_value),
+    )
+    assert len(parents) == 2
+
+
 async def test_create_unique_constraint_validation(session: AsyncSession):
     await parent_manager.create(
         session=session,
