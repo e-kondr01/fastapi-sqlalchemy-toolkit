@@ -278,6 +278,27 @@ async def get_parents(
 
 `GET /parents?title=foo&slug=bar` — both filters are applied with `AND`.
 
+**Case 4: Expression with a falsy value** (`MyModel.column.in_(value)`, `MyModel.column.endswith(value)`, `MyModel.column.startswith(value)`)
+
+If `value` is an empty list (`[]`) or an empty string (`""`), the filter is skipped.
+This covers `in_([])`, `endswith("")`, `startswith("")` and similar operators.
+
+```python
+@router.get("/parents")
+async def get_parents(
+    session: Session,
+    slugs: list[str] = Query(default=[]),
+) -> list[ParentListSchema]:
+    return await parent_manager.list(
+        session,
+        optional_where=Parent.slug.in_(slugs),
+    )
+```
+
+`GET /parents` — no filter applied, all `Parent` objects are returned.
+
+`GET /parents?slugs=foo&slugs=bar` — only `Parent` objects whose `slug` is in `['foo', 'bar']` are returned.
+
 > **Note**: nesting of compound expressions (e.g. `(a & b) | c`) is not supported.
 
 **Multiple expressions as separate arguments**

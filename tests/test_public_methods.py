@@ -1079,6 +1079,122 @@ async def test_list_with_optional_where_multi_all_none(session: AsyncSession):
     assert len(parents) == 2
 
 
+async def test_list_with_optional_where_in_applied(session: AsyncSession):
+    """Case 4: in_ expression, non-empty list — filter is applied."""
+    target_slug = "optional-where-in-slug1"
+    await session.execute(
+        insert(Parent),
+        [
+            {"title": "optional-where-in-title-1", "slug": target_slug},
+            {"title": "optional-where-in-title-2", "slug": "optional-where-in-slug2"},
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=Parent.slug.in_([target_slug]),
+    )
+    assert len(parents) == 1
+    assert parents[0].slug == target_slug
+
+
+async def test_list_with_optional_where_in_skipped(session: AsyncSession):
+    """Case 4: in_ expression, empty list — filter is skipped (all returned)."""
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-in-skip-title-1",
+                "slug": "optional-where-in-skip-slug1",
+            },
+            {
+                "title": "optional-where-in-skip-title-2",
+                "slug": "optional-where-in-skip-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=Parent.slug.in_([]),
+    )
+    assert len(parents) == 2
+
+
+async def test_list_with_optional_where_endswith_applied(session: AsyncSession):
+    """Case 4: endswith expression, non-empty string — filter is applied."""
+    target_slug = "optional-where-ends-slug-xyz"
+    await session.execute(
+        insert(Parent),
+        [
+            {"title": "optional-where-ends-title-1", "slug": target_slug},
+            {
+                "title": "optional-where-ends-title-2",
+                "slug": "optional-where-ends-slug-abc",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=Parent.slug.endswith("xyz"),
+    )
+    assert len(parents) == 1
+    assert parents[0].slug == target_slug
+
+
+async def test_list_with_optional_where_endswith_skipped(session: AsyncSession):
+    """Case 4: endswith expression, empty string — filter is skipped (all returned)."""
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "optional-where-ends-skip-title-1",
+                "slug": "optional-where-ends-skip-slug1",
+            },
+            {
+                "title": "optional-where-ends-skip-title-2",
+                "slug": "optional-where-ends-skip-slug2",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=Parent.slug.endswith(""),
+    )
+    assert len(parents) == 2
+
+
+async def test_list_with_optional_where_in_compound_one_empty(session: AsyncSession):
+    """Case 4 in compound: in_([]) in & expression — only non-empty filter applied."""
+    target_title = "optional-where-compound-in-title"
+    await session.execute(
+        insert(Parent),
+        [
+            {"title": target_title, "slug": "optional-where-compound-in-slug1"},
+            {"title": target_title, "slug": "optional-where-compound-in-slug2"},
+            {
+                "title": "optional-where-compound-in-other",
+                "slug": "optional-where-compound-in-slug3",
+            },
+        ],
+    )
+    await session.commit()
+
+    parents = await parent_manager.list(
+        session=session,
+        optional_where=(Parent.title == target_title) & Parent.slug.in_([]),
+    )
+    assert len(parents) == 2
+    for parent in parents:
+        assert parent.title == target_title
+
+
 async def test_create_unique_constraint_validation(session: AsyncSession):
     await parent_manager.create(
         session=session,

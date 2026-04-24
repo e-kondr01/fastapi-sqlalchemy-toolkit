@@ -26,7 +26,7 @@ from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
 from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import Null, UnaryExpression
+from sqlalchemy.sql.elements import BindParameter, Null, UnaryExpression
 from sqlalchemy.sql.expression import BinaryExpression, ColumnElement
 from sqlalchemy.sql.functions import Function
 from sqlalchemy.sql.schema import ScalarElementColumnDefault
@@ -44,6 +44,15 @@ def sqlalchemy_model_to_dict(model: DeclarativeBase) -> dict:
     db_obj_dict = model.__dict__.copy()
     db_obj_dict.pop("_sa_instance_state", None)
     return db_obj_dict
+
+
+def _is_falsy_bind_param(right: Any) -> bool:
+    """Return True if *right* is a BindParameter with a falsy str or list value."""
+    return (
+        isinstance(right, BindParameter)
+        and isinstance(right.value, str | list)
+        and not right.value
+    )
 
 
 def _get_model_pk(model: type[DeclarativeBase]) -> InstrumentedAttribute:
@@ -1236,16 +1245,20 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
     @classmethod
     def handle_optional_where_expression(cls, optional_where: Any) -> Any:
         """
-        Обрабатывает одно выражение optional_where, пропуская фильтр, если его значение None.
+        Обрабатывает одно выражение optional_where, пропуская фильтр,
+        если его значение None.
 
         Поддерживает:
         1. Простые выражения вида MyModel.field == value
         2. Выражения с функциями/операторами вида func.date(MyModel.field) == value
         3. Составные выражения вида (expr1) & (expr2) или (expr1) | (expr2)
            (без вложенности)
+        4. Выражения с "пустым" значением вида MyModel.column.in_([]),
+           MyModel.column.endswith(""), MyModel.column.startswith("")
 
-        Если value равно None, фильтр не применяется.
-        В составных выражениях исключаются части с value == None,
+        Если value равно None или является пустой строкой/списком,
+        фильтр не применяется.
+        В составных выражениях исключаются части с такими значениями,
         при этом оператор & или | сохраняется.
         """
         if optional_where is None:
@@ -1257,17 +1270,17 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 clause
                 for clause in optional_where.clauses
                 if not isinstance(clause.right, Null)
+                and not _is_falsy_bind_param(getattr(clause, "right", None))
             ]
             if not remaining:
                 return None
             if len(remaining) == 1:
                 return remaining[0]
-            if optional_where.operator.__name__ == "and_":
-                return and_(*remaining)
-            return or_(*remaining)
+            combiner = and_ if optional_where.operator.__name__ == "and_" else or_
+            return combiner(*remaining)
 
-        # simple binary expression
-        if isinstance(getattr(optional_where, "right", None), Null):
+        right = getattr(optional_where, "right", None)
+        if isinstance(right, Null) or _is_falsy_bind_param(right):
             return None
         return optional_where
 
