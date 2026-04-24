@@ -1148,10 +1148,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 model = filter_expression.parent._identity_class
             elif isinstance(filter_expression, Function):
                 model = filter_expression.entity_namespace
-            elif isinstance(filter_expression, ColumnElement):
-                model = self.model  # Not supported
             else:
-                model = filter_expression.__self__.parent._identity_class
+                model = self.model  # Not supported
             if model != self.model:
                 models_to_join.add(model)
         for model in models_to_join:
