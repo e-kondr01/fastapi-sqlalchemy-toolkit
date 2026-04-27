@@ -390,6 +390,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#filtering-with-optional-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtering with optional expressions
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#filtering-by-null-via-api" class="md-nav__link">
     <span class="md-ellipsis">
       Filtering by null via API
@@ -581,6 +590,15 @@
   <a href="#filtering-without-additional-processing" class="md-nav__link">
     <span class="md-ellipsis">
       Filtering without additional processing
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#filtering-with-optional-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      Filtering with optional expressions
     </span>
   </a>
   
@@ -788,28 +806,115 @@ you should use the <code>filter</code> and <code>paginated_filter</code> methods
     necessary for filtering by fields of related models.</p>
 </li>
 </ol>
+<h3 id="filtering-with-optional-expressions">Filtering with optional expressions<a class="headerlink" href="#filtering-with-optional-expressions" title="Permanent link">&para;</a></h3>
+<p>The <code>optional_where</code> parameter of the <code>list</code> and <code>paginated_list</code> methods accepts
+SQLAlchemy expressions that may contain <code>None</code> values. Filters with a <code>None</code> value
+are automatically skipped.</p>
+<p>This is useful in list API endpoints where filtering is optional — if the query parameter
+is not provided (i.e., its value is <code>None</code>), the filter is not applied.</p>
+<p>The <code>optional_where</code> parameter supports three kinds of expressions:</p>
+<p><strong>Case 1: Simple expression</strong> (<code>MyModel.field == value</code>)</p>
+<p>If <code>value</code> is <code>None</code>, the filter is skipped entirely. Otherwise it is applied as-is.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/parents&quot;</span><span class="p">)</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_parents</span><span class="p">(</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ParentListSchema</span><span class="p">]:</span>
+</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>        <span class="n">optional_where</span><span class="o">=</span><span class="p">(</span><span class="n">Parent</span><span class="o">.</span><span class="n">title</span> <span class="o">==</span> <span class="n">title</span><span class="p">),</span>
+</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p><code>GET /parents</code> — no filter applied, all <code>Parent</code> objects are returned.</p>
+<p><code>GET /parents?title=foo</code> — only <code>Parent</code> objects with <code>title = 'foo'</code> are returned.</p>
+<p><strong>Case 2: Function or operator expression</strong> (<code>func.date(MyModel.field) == value</code>, <code>MyModel.field.ilike(value)</code>)</p>
+<p>Same behaviour as Case 1 — if <code>value</code> is <code>None</code>, the filter is skipped.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/parents&quot;</span><span class="p">)</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_parents</span><span class="p">(</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>    <span class="n">created_at_date</span><span class="p">:</span> <span class="n">date</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ParentListSchema</span><span class="p">]:</span>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>        <span class="n">optional_where</span><span class="o">=</span><span class="p">(</span><span class="n">func</span><span class="o">.</span><span class="n">date</span><span class="p">(</span><span class="n">Parent</span><span class="o">.</span><span class="n">created_at</span><span class="p">)</span> <span class="o">==</span> <span class="n">created_at_date</span><span class="p">),</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Case 3: Compound expression with <code>&amp;</code> or <code>|</code></strong> (<code>(expr1) &amp; (expr2)</code>, <code>(expr1) | (expr2)</code>)</p>
+<p>Sub-expressions whose values are <code>None</code> are excluded. The remaining sub-expressions
+are combined using the original operator (<code>&amp;</code> or <code>|</code>). If all values are <code>None</code>,
+the filter is skipped entirely.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/parents&quot;</span><span class="p">)</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_parents</span><span class="p">(</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>    <span class="n">slug</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ParentListSchema</span><span class="p">]:</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>        <span class="n">optional_where</span><span class="o">=</span><span class="p">(</span><span class="n">Parent</span><span class="o">.</span><span class="n">title</span> <span class="o">==</span> <span class="n">title</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">Parent</span><span class="o">.</span><span class="n">slug</span> <span class="o">==</span> <span class="n">slug</span><span class="p">),</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p><code>GET /parents</code> — no filter applied, all <code>Parent</code> objects are returned.</p>
+<p><code>GET /parents?title=foo</code> — only the <code>title</code> filter is applied.</p>
+<p><code>GET /parents?title=foo&amp;slug=bar</code> — both filters are applied with <code>AND</code>.</p>
+<p><strong>Case 4: Expression with a falsy value</strong> (<code>MyModel.column.in_(value)</code>, <code>MyModel.column.endswith(value)</code>, <code>MyModel.column.startswith(value)</code>)</p>
+<p>If <code>value</code> is an empty list (<code>[]</code>) or an empty string (<code>""</code>), the filter is skipped.
+This covers <code>in_([])</code>, <code>endswith("")</code>, <code>startswith("")</code> and similar operators.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/parents&quot;</span><span class="p">)</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_parents</span><span class="p">(</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>    <span class="n">slugs</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Query</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="p">[]),</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ParentListSchema</span><span class="p">]:</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>        <span class="n">optional_where</span><span class="o">=</span><span class="n">Parent</span><span class="o">.</span><span class="n">slug</span><span class="o">.</span><span class="n">in_</span><span class="p">(</span><span class="n">slugs</span><span class="p">),</span>
+</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p><code>GET /parents</code> — no filter applied, all <code>Parent</code> objects are returned.</p>
+<p><code>GET /parents?slugs=foo&amp;slugs=bar</code> — only <code>Parent</code> objects whose <code>slug</code> is in <code>['foo', 'bar']</code> are returned.</p>
+<blockquote>
+<p><strong>Note</strong>: nesting of compound expressions (e.g. <code>(a &amp; b) | c</code>) is not supported.</p>
+</blockquote>
+<p><strong>Multiple expressions as separate arguments</strong></p>
+<p>Instead of using <code>&amp;</code> to combine expressions, you can pass them as separate arguments
+in a tuple. Each argument supports all three expression kinds above. Non-<code>None</code>
+expressions are combined with <code>AND</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/parents&quot;</span><span class="p">)</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_parents</span><span class="p">(</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>    <span class="n">title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>    <span class="n">slug</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ParentListSchema</span><span class="p">]:</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>        <span class="n">optional_where</span><span class="o">=</span><span class="p">(</span><span class="n">Parent</span><span class="o">.</span><span class="n">title</span> <span class="o">==</span> <span class="n">title</span><span class="p">,</span> <span class="n">Parent</span><span class="o">.</span><span class="n">slug</span> <span class="o">==</span> <span class="n">slug</span><span class="p">),</span>
+</span><span id="__span-19-10"><a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<p><code>GET /parents</code> — no filter applied, all <code>Parent</code> objects are returned.</p>
+<p><code>GET /parents?title=foo</code> — only the <code>title</code> filter is applied.</p>
+<p><code>GET /parents?title=foo&amp;slug=bar</code> — both filters are applied with <code>AND</code>.</p>
 <h3 id="filtering-by-null-via-api">Filtering by <code>null</code> via API<a class="headerlink" href="#filtering-by-null-via-api" title="Permanent link">&para;</a></h3>
 <p>If in a list API endpoint, you need to be able to filter the field value
 by the passed value and also filter it by <code>null</code>, it is recommended to use the
 <code>nullable_filter_expressions</code> parameter of the <code>list</code> (<code>paginated_list</code>) methods:</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">NullableQuery</span>
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="kn">from</span> <span class="nn">app.managers</span> <span class="kn">import</span> <span class="n">my_object_manager</span>
-</span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">MyObject</span>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>
-</span><span id="__span-15-8"><a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/my-objects&quot;</span><span class="p">)</span>
-</span><span id="__span-15-9"><a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_my_objects</span><span class="p">(</span>
-</span><span id="__span-15-10"><a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
-</span><span id="__span-15-11"><a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>    <span class="n">deleted_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="n">NullableQuery</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-15-12"><a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MyObjectListSchema</span><span class="p">]:</span>
-</span><span id="__span-15-13"><a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">my_object_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
-</span><span id="__span-15-14"><a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>        <span class="n">session</span><span class="p">,</span>
-</span><span id="__span-15-15"><a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>        <span class="n">nullable_filter_expressions</span><span class="o">=</span><span class="p">{</span>
-</span><span id="__span-15-16"><a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>            <span class="n">MyObject</span><span class="o">.</span><span class="n">deleted_at</span><span class="p">:</span> <span class="n">deleted_at</span>
-</span><span id="__span-15-17"><a id="__codelineno-15-17" name="__codelineno-15-17" href="#__codelineno-15-17"></a>        <span class="p">}</span>
-</span><span id="__span-15-18"><a id="__codelineno-15-18" name="__codelineno-15-18" href="#__codelineno-15-18"></a>    <span class="p">)</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="kn">from</span> <span class="nn">datetime</span> <span class="kn">import</span> <span class="n">datetime</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="kn">from</span> <span class="nn">fastapi_sqlalchemy_toolkit</span> <span class="kn">import</span> <span class="n">NullableQuery</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="kn">from</span> <span class="nn">app.managers</span> <span class="kn">import</span> <span class="n">my_object_manager</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="kn">from</span> <span class="nn">app.models</span> <span class="kn">import</span> <span class="n">MyObject</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="nd">@router</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;/my-objects&quot;</span><span class="p">)</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="k">async</span> <span class="k">def</span> <span class="nf">get_my_objects</span><span class="p">(</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>    <span class="n">session</span><span class="p">:</span> <span class="n">Session</span><span class="p">,</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>    <span class="n">deleted_at</span><span class="p">:</span> <span class="n">datetime</span> <span class="o">|</span> <span class="n">NullableQuery</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MyObjectListSchema</span><span class="p">]:</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>    <span class="k">return</span> <span class="k">await</span> <span class="n">my_object_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span>
+</span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>        <span class="n">session</span><span class="p">,</span>
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>        <span class="n">nullable_filter_expressions</span><span class="o">=</span><span class="p">{</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>            <span class="n">MyObject</span><span class="o">.</span><span class="n">deleted_at</span><span class="p">:</span> <span class="n">deleted_at</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>        <span class="p">}</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>    <span class="p">)</span>
 </span></code></pre></div>
 <p>For the parameter with <code>null</code> filtering support, you need to specify the possible type
 <code>fastapi_sqlalchemy_toolkit.NullableQuery</code>.</p>
@@ -818,9 +923,9 @@ objects of <code>MyObject</code> with <code>deleted_at IS NULL</code> will be re
 <h3 id="filtering-by-reverse-relationships">Filtering by reverse relationships<a class="headerlink" href="#filtering-by-reverse-relationships" title="Permanent link">&para;</a></h3>
 <p>Also, there is support for filtering by reverse relationships
 (<code>relationship()</code> in the one-to-many direction) using the <code>.any()</code> method.</p>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># If ParentModel.children is a one-to-many relationship</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="c1"># Returns Parent objects that have a relationship with ChildModel with ids 1 or 2</span>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># If ParentModel.children is a one-to-many relationship</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="k">await</span> <span class="n">parent_manager</span><span class="o">.</span><span class="n">list</span><span class="p">(</span><span class="n">session</span><span class="p">,</span> <span class="n">children</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">])</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="c1"># Returns Parent objects that have a relationship with ChildModel with ids 1 or 2</span>
 </span></code></pre></div>
 
 
