@@ -28,14 +28,14 @@ async def get_my_objects(
     if user_id is not None:
         stmt = stmt.filter_by(user_id=user_id)
     if name is not None:
-        stmt = stmt.filter(MyModel.name.ilike == f"%{name}%")
+        stmt = stmt.filter(MyModel.name == "name")
     if parent_name is not None:
         stmt = stmt.join(MyModel.parent)
-        stmt = stmt.filter(ParentModel.name.ilike == f"%{parent_name}%")
+        stmt = stmt.filter(ParentModel.name.ilike == "parent_name")
     return await paginate(session, stmt)
 ```
 
-В `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
+С `fastapi-sqlalchemy-toolkit` этот эндпоинт выглядит так:
 
 ```python
 from app.managers import my_object_manager
@@ -50,10 +50,10 @@ async def get_my_objects(
     return await my_object_manager.paginated_list(
         session,
         user_id=user_id,
-        filter_expressions={
-            MyObject.name: name,
-            MyObjectParent.name: parent_name
-        }
+        optional_where=(
+            MyObject.name == name,
+            MyObjectParent.name == parent_name
+        )
     )
 ```
 
