@@ -25,3 +25,16 @@ If the uniqueness constraint is violated, an `fastapi.HTTPException` will be rai
 If the model defines unique constraints using `sqlalchemy.UniqueConstraint`, then when using the `create` or `update` methods, an SQL query will be executed to verify that no other objects with the same combination of field values in the unique constraint exist.
 
 If the unique constraint is violated, an `fastapi.HTTPException` will be raised.
+
+## Unique Indexes Validation
+
+If the model defines a unique `sqlalchemy.Index`, then when using the `create` or `update` methods, an SQL query will be executed to verify that no other object violates that index.
+
+For **partial** unique indexes (`postgresql_where=...`), validation runs only when the created/updated row itself matches the `WHERE` predicate. Rows outside the partial index are not checked against it.
+
+Supported `postgresql_where` forms for deciding whether the row is covered:
+
+- Column expressions such as `Model.kind == "main"` (including `and_(...)` of equalities)
+- Simple `text()` equalities such as `text("kind = 'main'")`
+
+Unsupported / complex predicates are treated as matching (fail-safe): validation still runs.

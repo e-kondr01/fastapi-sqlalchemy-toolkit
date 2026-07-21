@@ -1,5 +1,6 @@
 # ruff: noqa: UP006
 from collections.abc import Callable, Iterable
+from enum import Enum
 from typing import Any, Generic, List, TypeVar, overload  # noqa: UP035
 
 from fastapi import HTTPException, status
@@ -25,9 +26,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, contains_eager, load_only
 from sqlalchemy.orm.attributes import InstrumentedAttribute
 from sqlalchemy.orm.relationships import Relationship
-from sqlalchemy.sql import Select
-from sqlalchemy.sql.elements import BindParameter, Null, UnaryExpression
-from sqlalchemy.sql.expression import BinaryExpression, ColumnElement
+from sqlalchemy.sql import Select, operators
+from sqlalchemy.sql.elements import (
+    BinaryExpression,
+    BindParameter,
+    BooleanClauseList,
+    Null,
+    TextClause,
+    UnaryExpression,
+)
+from sqlalchemy.sql.expression import ColumnElement
 from sqlalchemy.sql.functions import Function
 from sqlalchemy.sql.schema import ScalarElementColumnDefault
 from sqlalchemy.sql.selectable import Exists
@@ -1483,11 +1491,77 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                         ),
                     )
 
+    @staticmethod
+    def _partial_index_values_equal(actual: Any, expected: Any) -> bool:
+        """Сравнить обычные и Enum-значения из объекта и условия индекса."""
+        actual_normalized = actual.name if isinstance(actual, Enum) else actual
+        expected_normalized = expected.name if isinstance(expected, Enum) else expected
+        if actual_normalized == expected_normalized:
+            return True
+        if isinstance(actual, Enum) and actual.value == expected_normalized:
+            return True
+        if isinstance(expected, Enum) and expected.value == actual_normalized:
+            return True
+        return str(actual_normalized) == str(expected_normalized)
+
+    @classmethod
+    def _matches_partial_index_where(cls, condition: Any, in_obj: ModelDict) -> bool:
+        """
+        Проверить, покрывается ли объект условием partial index.
+
+        Неподдерживаемое условие считается совпавшим, чтобы не пропустить
+        потенциальное нарушение уникальности.
+        """
+        if isinstance(condition, BooleanClauseList):
+            return all(
+                cls._matches_partial_index_where(clause, in_obj) for clause in condition
+            )
+
+        column_name: str | None = None
+        expected: Any = None
+        if isinstance(condition, TextClause):
+            raw_column, separator, raw_expected = condition.text.partition("=")
+            column_name = raw_column.strip()
+            raw_expected = raw_expected.strip()
+            valid_column = column_name.isascii() and column_name.isidentifier()
+
+            if not separator or not valid_column or not raw_expected:
+                column_name = None
+            elif raw_expected[0] in {'"', "'"}:
+                quote = raw_expected[0]
+                if raw_expected[-1] == quote and quote not in raw_expected[1:-1]:
+                    expected = raw_expected[1:-1]
+                else:
+                    column_name = None
+            elif all(char.isalnum() or char in "._" for char in raw_expected):
+                expected = raw_expected
+            else:
+                column_name = None
+        elif (
+            isinstance(condition, BinaryExpression)
+            and condition.operator is operators.eq
+        ):
+            column_name = getattr(condition.left, "name", None) or getattr(
+                condition.left, "key", None
+            )
+            expected = getattr(
+                condition.right,
+                "value",
+                getattr(condition.right, "effective_value", condition.right),
+            )
+
+        if not isinstance(column_name, str) or column_name not in in_obj:
+            return True
+        return cls._partial_index_values_equal(in_obj[column_name], expected)
+
     async def validate_unique_indexes(
         self, session: AsyncSession, in_obj: ModelDict
     ) -> None:
         """
-        Валидирует соблюдение уникальности индексов
+        Валидирует соблюдение уникальности индексов.
+
+        Для partial unique index (`postgresql_where`) проверка выполняется только
+        если создаваемая/обновляемая запись сама попадает под WHERE.
         """
         for index in self.unique_indexes:
             condition = (
@@ -1495,6 +1569,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 if index.dialect_options.get("postgresql")
                 else None
             )
+            if not self._matches_partial_index_where(condition, in_obj):
+                continue
+
             filters = []
 
             for column in index.columns:
