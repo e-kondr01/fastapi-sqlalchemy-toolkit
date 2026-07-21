@@ -7,22 +7,32 @@ from tests.db import async_session_factory, engine
 from tests.models import Base, CustomPKBase
 
 
-@pytest.fixture(autouse=True)
-async def create_metadata(anyio_backend: str) -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await conn.run_sync(CustomPKBase.metadata.create_all)
-
-
 @pytest.fixture(scope="session")
 def anyio_backend() -> str:
     return "asyncio"
 
 
 @pytest.fixture(scope="session")
-async def connection(anyio_backend: str) -> AsyncGenerator[AsyncConnection, None]:
+async def connection(
+    anyio_backend: str,  # noqa: ARG001 - activates AnyIO's async-fixture runner
+) -> AsyncGenerator[AsyncConnection, None]:
     async with engine.connect() as connection:
         yield connection
+
+
+@pytest.fixture(scope="session", autouse=True)
+async def create_metadata(
+    connection: AsyncConnection,
+) -> AsyncGenerator[None, None]:
+    await connection.run_sync(Base.metadata.create_all)
+    await connection.run_sync(CustomPKBase.metadata.create_all)
+    await connection.commit()
+
+    yield
+
+    await connection.run_sync(CustomPKBase.metadata.drop_all)
+    await connection.run_sync(Base.metadata.drop_all)
+    await connection.commit()
 
 
 @pytest.fixture
