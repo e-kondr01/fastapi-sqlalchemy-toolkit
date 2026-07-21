@@ -1,4 +1,4 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, AsyncTransaction
@@ -8,24 +8,24 @@ from tests.models import Base, CustomPKBase
 
 
 @pytest.fixture(autouse=True)
-async def create_metadata():
+async def create_metadata(anyio_backend: str) -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(CustomPKBase.metadata.create_all)
 
 
 @pytest.fixture(scope="session")
-def anyio_backend():
+def anyio_backend() -> str:
     return "asyncio"
 
 
 @pytest.fixture(scope="session")
-async def connection(anyio_backend) -> AsyncGenerator[AsyncConnection, None]:
+async def connection(anyio_backend: str) -> AsyncGenerator[AsyncConnection, None]:
     async with engine.connect() as connection:
         yield connection
 
 
-@pytest.fixture()
+@pytest.fixture
 async def transaction(
     connection: AsyncConnection,
 ) -> AsyncGenerator[AsyncTransaction, None]:
@@ -39,7 +39,7 @@ async def persistent_session() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
-@pytest.fixture()
+@pytest.fixture
 async def session(
     connection: AsyncConnection, transaction: AsyncTransaction
 ) -> AsyncGenerator[AsyncSession, None]:
