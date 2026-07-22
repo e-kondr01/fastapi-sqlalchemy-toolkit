@@ -14,10 +14,14 @@ from tests.models import (
     ItemSchema,
     Parent,
     ParentSchema,
+    PartialUniqueExprSchema,
+    PartialUniqueTextSchema,
     category_manager,
     child_manager,
     item_manager,
     parent_manager,
+    partial_unique_expr_manager,
+    partial_unique_text_manager,
 )
 
 
@@ -1422,3 +1426,67 @@ async def test_custom_pk_unique_validation_on_update(session: AsyncSession):
     with pytest.raises(HTTPException) as exc_info:
         await item_manager.update(session, item1, ItemSchema(name="upd-unique-2"))
     assert exc_info.value.status_code == 422
+
+
+async def test_partial_unique_index_text_allows_non_matching_kind(
+    session: AsyncSession,
+):
+    group_id = uuid4()
+    await partial_unique_text_manager.create(
+        session, PartialUniqueTextSchema(group_id=group_id, kind="main")
+    )
+    extra = await partial_unique_text_manager.create(
+        session, PartialUniqueTextSchema(group_id=group_id, kind="extra")
+    )
+    assert extra.kind == "extra"
+
+
+async def test_partial_unique_index_text_rejects_second_main(session: AsyncSession):
+    group_id = uuid4()
+    await partial_unique_text_manager.create(
+        session, PartialUniqueTextSchema(group_id=group_id, kind="main")
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await partial_unique_text_manager.create(
+            session, PartialUniqueTextSchema(group_id=group_id, kind="main")
+        )
+    assert exc_info.value.status_code == 400
+    assert "group_id" in exc_info.value.detail
+
+
+async def test_partial_unique_index_text_allows_main_for_other_group(
+    session: AsyncSession,
+):
+    await partial_unique_text_manager.create(
+        session, PartialUniqueTextSchema(group_id=uuid4(), kind="main")
+    )
+    other = await partial_unique_text_manager.create(
+        session, PartialUniqueTextSchema(group_id=uuid4(), kind="main")
+    )
+    assert other.kind == "main"
+
+
+async def test_partial_unique_index_expr_allows_non_matching_kind(
+    session: AsyncSession,
+):
+    group_id = uuid4()
+    await partial_unique_expr_manager.create(
+        session, PartialUniqueExprSchema(group_id=group_id, kind="main")
+    )
+    extra = await partial_unique_expr_manager.create(
+        session, PartialUniqueExprSchema(group_id=group_id, kind="extra")
+    )
+    assert extra.kind == "extra"
+
+
+async def test_partial_unique_index_expr_rejects_second_main(session: AsyncSession):
+    group_id = uuid4()
+    await partial_unique_expr_manager.create(
+        session, PartialUniqueExprSchema(group_id=group_id, kind="main")
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await partial_unique_expr_manager.create(
+            session, PartialUniqueExprSchema(group_id=group_id, kind="main")
+        )
+    assert exc_info.value.status_code == 400
+    assert "group_id" in exc_info.value.detail

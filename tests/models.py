@@ -2,7 +2,17 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import Column, DateTime, ForeignKey, Table, UniqueConstraint, func
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Index,
+    Table,
+    UniqueConstraint,
+    column,
+    func,
+    text,
+)
 from sqlalchemy.orm import (
     DeclarativeBase,
     Mapped,
@@ -112,3 +122,55 @@ class ItemSchema(BaseModel):
 
 
 item_manager = ModelManager[Item, ItemSchema, ItemSchema](Item)
+
+
+class PartialUniqueText(Base):
+    """Partial unique index via text() postgresql_where."""
+
+    group_id: Mapped[UUID]
+    kind: Mapped[str]
+
+    __table_args__ = (
+        Index(
+            "uix_partial_unique_text_one_main_per_group",
+            "group_id",
+            unique=True,
+            postgresql_where=text("kind = 'main'"),
+        ),
+    )
+
+
+class PartialUniqueTextSchema(BaseModel):
+    group_id: UUID
+    kind: str
+
+
+partial_unique_text_manager = ModelManager[
+    PartialUniqueText, PartialUniqueTextSchema, PartialUniqueTextSchema
+](PartialUniqueText)
+
+
+class PartialUniqueExpr(Base):
+    """Partial unique index via Column expression postgresql_where."""
+
+    group_id: Mapped[UUID]
+    kind: Mapped[str]
+
+    __table_args__ = (
+        Index(
+            "uix_partial_unique_expr_one_main_per_group",
+            "group_id",
+            unique=True,
+            postgresql_where=(column("kind") == "main"),
+        ),
+    )
+
+
+class PartialUniqueExprSchema(BaseModel):
+    group_id: UUID
+    kind: str
+
+
+partial_unique_expr_manager = ModelManager[
+    PartialUniqueExpr, PartialUniqueExprSchema, PartialUniqueExprSchema
+](PartialUniqueExpr)
