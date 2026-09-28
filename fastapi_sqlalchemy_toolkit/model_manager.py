@@ -1,4 +1,5 @@
 # ruff: noqa: UP006
+import re
 from collections.abc import Callable, Iterable
 from enum import Enum
 from typing import Any, Generic, List, TypeVar, overload  # noqa: UP035
@@ -1504,6 +1505,11 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             return True
         return str(actual_normalized) == str(expected_normalized)
 
+    _NULL_CHECK_RE = re.compile(
+        r"^\s*(?P<column>[A-Za-z_][A-Za-z0-9_]*)\s+IS\s+(?P<not>NOT\s+)?NULL\s*$",
+        re.IGNORECASE,
+    )
+
     @classmethod
     def _matches_partial_index_where(cls, condition: Any, in_obj: ModelDict) -> bool:
         """
@@ -1520,6 +1526,14 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         column_name: str | None = None
         expected: Any = None
         if isinstance(condition, TextClause):
+            null_match = cls._NULL_CHECK_RE.match(condition.text)
+            if null_match:
+                column_name = null_match.group("column")
+                if column_name not in in_obj:
+                    return True
+                is_null = in_obj[column_name] is None
+                return not is_null if null_match.group("not") else is_null
+
             raw_column, separator, raw_expected = condition.text.partition("=")
             column_name = raw_column.strip()
             raw_expected = raw_expected.strip()
@@ -1537,18 +1551,28 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
                 expected = raw_expected
             else:
                 column_name = None
-        elif (
-            isinstance(condition, BinaryExpression)
-            and condition.operator is operators.eq
+        elif isinstance(condition, BinaryExpression) and condition.operator in (
+            operators.eq,
+            operators.is_,
+            operators.isnot,
         ):
             column_name = getattr(condition.left, "name", None) or getattr(
                 condition.left, "key", None
             )
-            expected = getattr(
-                condition.right,
-                "value",
-                getattr(condition.right, "effective_value", condition.right),
-            )
+            if condition.operator in (operators.is_, operators.isnot):
+                if not isinstance(column_name, str) or not isinstance(
+                    condition.right, Null
+                ):
+                    column_name = None
+                elif column_name in in_obj:
+                    is_null = in_obj[column_name] is None
+                    return not is_null if condition.operator is operators.isnot else is_null
+            else:
+                expected = getattr(
+                    condition.right,
+                    "value",
+                    getattr(condition.right, "effective_value", condition.right),
+                )
 
         if not isinstance(column_name, str) or column_name not in in_obj:
             return True

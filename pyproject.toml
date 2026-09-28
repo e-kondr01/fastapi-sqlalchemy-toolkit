@@ -18,6 +18,7 @@ classifiers = [
 dependencies = [
     "fastapi>=0.100.0",
     "sqlalchemy>=2.0.0",
+    "greenlet>=3.0.0",
     "fastapi_pagination>=0.12.12",
     "pydantic>=2.0.0",
 ]
