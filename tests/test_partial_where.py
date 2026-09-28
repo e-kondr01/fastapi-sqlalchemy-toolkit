@@ -113,3 +113,59 @@ def test_unsupported_text_fail_safe() -> None:
     assert (
         ModelManager._matches_partial_index_where(condition, {"kind": "extra"}) is True
     )
+
+
+def test_text_clause_is_null_matches() -> None:
+    condition = text("group_id IS NULL")
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"group_id": None})
+        is True
+    )
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"group_id": 1}) is False
+    )
+    # column missing from the object being validated: fail safe to "matches"
+    assert ModelManager._matches_partial_index_where(condition, {}) is True
+
+
+def test_text_clause_is_not_null_matches() -> None:
+    condition = text("  group_id   is   not   null  ")
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"group_id": None})
+        is False
+    )
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"group_id": 1}) is True
+    )
+
+
+def test_binary_expression_is_null_matches() -> None:
+    index = Index(
+        "ix_is_null",
+        _Model.group_id,
+        unique=True,
+        postgresql_where=(_Model.kind.is_(None)),
+    )
+    condition = index.dialect_options["postgresql"]["where"]
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"kind": None}) is True
+    )
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"kind": "main"}) is False
+    )
+
+
+def test_binary_expression_is_not_null_matches() -> None:
+    index = Index(
+        "ix_is_not_null",
+        _Model.group_id,
+        unique=True,
+        postgresql_where=(_Model.kind.isnot(None)),
+    )
+    condition = index.dialect_options["postgresql"]["where"]
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"kind": None}) is False
+    )
+    assert (
+        ModelManager._matches_partial_index_where(condition, {"kind": "main"}) is True
+    )
