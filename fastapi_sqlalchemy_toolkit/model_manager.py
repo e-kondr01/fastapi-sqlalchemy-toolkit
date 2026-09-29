@@ -676,6 +676,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = ...,
         *,
         unique: bool = ...,
+        distinct: bool = ...,
         **simple_filters: Any,
     ) -> List[ModelT]: ...
 
@@ -691,6 +692,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = ...,
         *,
         unique: bool = ...,
+        distinct: bool = ...,
         **simple_filters: Any,
     ) -> List[Row]: ...
 
@@ -705,6 +707,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = None,
         *,
         unique: bool = False,
+        distinct: bool = False,
         **simple_filters: Any,
     ) -> List[Any]:
         """
@@ -728,6 +731,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param offset: смещение, передаётся в параметр offset запроса SQLAlchemy
 
+        :param distinct: определяет необходимость вызова метода .distinct()
+        у запроса SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
@@ -740,6 +746,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             where,
             limit=limit,
             offset=offset,
+            distinct=distinct,
             **simple_filters,
         )
         result = await session.execute(stmt)
@@ -768,6 +775,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = ...,
         *,
         unique: bool = ...,
+        distinct: bool = ...,
         **simple_filters: Any,
     ) -> List[ModelT]: ...
 
@@ -789,6 +797,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = ...,
         *,
         unique: bool = ...,
+        distinct: bool = ...,
         **simple_filters: Any,
     ) -> List[Row]: ...
 
@@ -809,6 +818,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         offset: int | None = None,
         *,
         unique: bool = False,
+        distinct: bool = False,
         **simple_filters: Any,
     ) -> List[Any]:
         """
@@ -850,6 +860,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         :param offset: смещение, передаётся в параметр offset запроса SQLAlchemy
 
+        :param distinct: определяет необходимость вызова метода .distinct()
+        у запроса SQLAlchemy
+
         :param simple_filters: параметры для фильтрации по точному соответствию,
         аналогично методу .filter_by() SQLAlchemy
 
@@ -871,6 +884,7 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
             where,
             limit=limit,
             offset=offset,
+            distinct=distinct,
             **simple_filters,
         )
         stmt = self.get_joins(
@@ -1325,6 +1339,8 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
         where: Any | None = None,
         limit: int | None = None,
         offset: int | None = None,
+        *,
+        distinct: bool = False,
         **simple_filters: Any,
     ) -> Select:
         if base_stmt is not None:
@@ -1362,6 +1378,9 @@ class ModelManager(Generic[ModelT, CreateSchemaT, UpdateSchemaT]):
 
         if where is not None:
             stmt = stmt.where(*where) if isinstance(where, tuple) else stmt.where(where)
+
+        if distinct:
+            stmt = stmt.distinct()
 
         if limit is not None:
             stmt = stmt.limit(limit)
