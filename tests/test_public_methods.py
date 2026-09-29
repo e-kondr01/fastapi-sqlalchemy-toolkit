@@ -667,6 +667,42 @@ async def test_list_with_order_by(session: AsyncSession):
     assert parents[-1].description[-1] == "c"
 
 
+async def test_list_with_distinct(session: AsyncSession):
+    await session.execute(
+        insert(Parent),
+        [
+            {
+                "title": "test-distinct-title1",
+                "slug": "test-distinct-slug1",
+                "description": "test-distinct-description-shared",
+            },
+            {
+                "title": "test-distinct-title2",
+                "slug": "test-distinct-slug2",
+                "description": "test-distinct-description-shared",
+            },
+            {
+                "title": "test-distinct-title3",
+                "slug": "test-distinct-slug3",
+                "description": "test-distinct-description-unique",
+            },
+        ],
+    )
+    await session.commit()
+
+    base_stmt = select(Parent.description).where(
+        Parent.description.startswith("test-distinct-description")
+    )
+
+    descriptions = await parent_manager.list(session=session, base_stmt=base_stmt)
+    assert len(descriptions) == 3
+
+    distinct_descriptions = await parent_manager.list(
+        session=session, base_stmt=base_stmt, distinct=True
+    )
+    assert len(distinct_descriptions) == 2
+
+
 async def test_list_with_options(session: AsyncSession):
     parent = Parent(
         id=uuid4(),
